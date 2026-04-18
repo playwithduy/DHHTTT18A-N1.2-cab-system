@@ -105,19 +105,64 @@
 			}
 		},
 		{
+		{
 			"name": "25. Kafka event ride_requested được publish",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Valid 200 list\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Kafka Outbox contains event\", () => {",
+							"    var found = false;",
+							"    var bId = pm.variables.get(\"bookingId\");",
+							"    if (jsonData.data) {",
+							"        for(let ev of jsonData.data) {",
+							"             if (ev.payload.includes(bId) && ev.payload.includes('ride_pending_payment')) found = true;",
+							"        }",
+							"    }",
+							"    pm.expect(found).to.be.true;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"url": { "raw": "{{baseUrl}}/health", "description": "Check console logs for 'ride_requested published'", "host": ["{{baseUrl}}"], "path": ["health"] }
+				"url": { "raw": "{{baseUrl}}/bookings/outbox", "host": ["{{baseUrl}}"], "path": ["bookings", "outbox"] }
 			}
 		},
 		{
 			"name": "26. Driver nhận notification",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Valid 200 list\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Notification logs contain dispatch\", () => {",
+							"    var found = false;",
+							"    var bId = pm.variables.get(\"bookingId\");",
+							"    if (jsonData.data) {",
+							"        for(let ev of jsonData.data) {",
+							"             if (ev.ride_id === bId && ev.type === 'notify_drivers') found = true;",
+							"        }",
+							"    }",
+							"    pm.expect(found).to.be.true;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"url": { "raw": "{{baseUrl}}/health", "description": "Check notification-service logs", "host": ["{{baseUrl}}"], "path": ["health"] }
+				"url": { "raw": "{{baseUrl}}/notifications/logs", "host": ["{{baseUrl}}"], "path": ["notifications", "logs"] }
 			}
 		},
 		{
@@ -193,6 +238,24 @@
 		},
 		{
 			"name": "30. Retry khi Pricing service timeout",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"System did not crash (Fail-Fast)\", () => { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+							"pm.test(\"Fallback applied or Timeout handled gracefully\", () => {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"});",
+							"pm.test(\"Response time is acceptable (Fallback fired)\", () => {",
+							"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",

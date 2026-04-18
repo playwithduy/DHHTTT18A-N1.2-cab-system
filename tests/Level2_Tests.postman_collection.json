@@ -282,12 +282,32 @@
 				},
 				{
 					"name": "20. Input quá lớn (payload size test)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.variables.set(\"hugePayload\", \"A\".repeat(1024 * 1024 * 1.5));"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Returns 413 Payload Too Large\", () => { pm.response.to.have.status(413); });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"data\": \"huge_string_here...\"\n}",
+							"raw": "{\n    \"data\": \"{{hugePayload}}\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }

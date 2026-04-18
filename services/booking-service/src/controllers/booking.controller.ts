@@ -109,11 +109,11 @@ export const createBooking = async (req: Request, res: Response) => {
   const lockKey = `lock:booking:${userId}`;
   const acquired = await redis.set(lockKey, 'locked', { NX: true, EX: 10 });
   console.log(`[DEBUG] Acquired: ${acquired} for user ${userId}. Simulate race: ${req.body.simulate_race_condition}`);
-  if (!acquired) return res.status(429).json({ success: false, message: 'Another booking is in progress' });
+  if (!acquired) return res.status(409).json({ success: false, message: 'Another booking is in progress' });
   if (req.body.simulate_race_condition === true) {
     const delRes = await redis.del(lockKey);
-    console.log(`[DEBUG] Simulate race condition returning 429. Deleted lock: ${delRes}`);
-    return res.status(429).json({ success: false, message: 'Another booking is in progress' });
+    console.log(`[DEBUG] Simulate race condition returning 409. Deleted lock: ${delRes}`);
+    return res.status(409).json({ success: false, message: 'Another booking is in progress' });
   }
 
   try {
@@ -126,7 +126,7 @@ export const createBooking = async (req: Request, res: Response) => {
     const driverAvailable = driverRes.data.success && driverRes.data.data.length > 0;
     if (!driverAvailable) {
       await redis.del(lockKey);
-      return res.status(200).json({ success: false, message: 'No drivers available', status: 'FAILED' });
+      return res.status(200).json({ success: false, message: 'No drivers available', data: { status: 'FAILED', driverId: null } });
     }
 
     const eta = aiRes.data.data?.eta || aiRes.data.eta || 5;
@@ -294,6 +294,18 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
     }
 
     res.json({ success: true, data: booking });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getOutbox = async (req: Request, res: Response) => {
+  try {
+    const events = await prisma.outbox.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.json({ success: true, data: events });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

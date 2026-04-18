@@ -43,6 +43,15 @@
 			"name": "32. Rollback khi lỗi giữa chừng (DB Error)",
 			"event": [
 				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.variables.set(\"idemp_tc32\", \"rollback-32-\" + Math.random());"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
 					"listen": "test",
 					"script": {
 						"exec": [
@@ -50,6 +59,23 @@
 							"pm.test(\"Error message is clear\", () => {",
 							"    var msg = pm.response.json().message || '';",
 							"    pm.expect(msg).to.include(\"DB_ERROR\");",
+							"});",
+							"pm.test(\"Rollback verification: DB is clean\", (done) => {",
+							"    const req = {",
+							"        url: pm.variables.get(\"baseUrl\") + '/bookings',",
+							"        method: 'GET',",
+							"        header: { 'Authorization': 'Bearer ' + pm.variables.get('accessToken') }",
+							"    };",
+							"    pm.sendRequest(req, (err, res) => {",
+							"        if (err) throw err;",
+							"        let found = false;",
+							"        const idemp = pm.variables.get(\"idemp_tc32\");",
+							"        for (let b of res.json().data) {",
+							"            if (b.idempotencyKey === idemp) found = true;",
+							"        }",
+							"        pm.expect(found).to.be.false;",
+							"        done();",
+							"    });",
 							"});"
 						],
 						"type": "text/javascript"
@@ -60,7 +86,7 @@
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "x-idempotency-key", "value": "rollback-32-{{$randomInt}}" }
+					{ "key": "x-idempotency-key", "value": "{{idemp_tc32}}" }
 				],
 				"body": {
 					"mode": "raw",

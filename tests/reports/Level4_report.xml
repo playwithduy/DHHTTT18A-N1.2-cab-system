@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="LEVEL 4 - TRANSACTION" tests="12" time="1.555">
+  <testsuite name="31. Transaction tạo booking thành công" id="ca2e7e73-d0e5-4674-8131-68cac8dc83b5" timestamp="2026-04-18T22:10:11.530Z" tests="3" failures="0" errors="0" time="0.196">
+    <testcase name="Fail-Fast: Code is not unexpected 5xx" time="0.196" classname="31TransactionToBookingThanhCong"/>
+    <testcase name="Booking created successfully" time="0.196" classname="31TransactionToBookingThanhCong"/>
+    <testcase name="Status is REQUESTED" time="0.196" classname="31TransactionToBookingThanhCong"/>
+  </testsuite>
+  <testsuite name="32. Rollback khi lỗi giữa chừng (DB Error)" id="1c1be014-af1f-41bb-b68d-8c9fa2cee29c" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="0.023">
+    <testcase name="Expected Simulated DB Error (500)" time="0.023" classname="32RollbackKhiLiGiaChngDbError"/>
+    <testcase name="Error message is clear" time="0.023" classname="32RollbackKhiLiGiaChngDbError"/>
+  </testsuite>
+  <testsuite name="33. Payment thất bại → rollback booking" id="43aac3ef-8b34-4a6b-bef9-acc5a2927bbc" timestamp="2026-04-18T22:10:11.530Z" tests="3" failures="0" errors="0" time="0.092">
+    <testcase name="Fail-Fast: Code is not 5xx" time="0.092" classname="33PaymentThtBiRollbackBooking"/>
+    <testcase name="Returns 400 Bad Request" time="0.092" classname="33PaymentThtBiRollbackBooking"/>
+    <testcase name="Booking marked as FAILED" time="0.092" classname="33PaymentThtBiRollbackBooking"/>
+  </testsuite>
+  <testsuite name="34. Idempotent transaction (duplicate check)" id="e5156b35-b32d-48a9-b42c-11885c560b07" timestamp="2026-04-18T22:10:11.530Z" tests="1" failures="0" errors="0" time="0.050">
+    <testcase name="Status is 201 Created (First unique key)" time="0.050" classname="34IdempotentTransactionDuplicateCheck"/>
+  </testsuite>
+  <testsuite name="34.1 Re-send same key → expect same record" id="37740d7c-e235-451a-a821-69c38ab0823e" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="0.012">
+    <testcase name="Status is 200 OK (Cached record returned)" time="0.012" classname="341ReSendSameKeyExpectSameRecord"/>
+    <testcase name="ID matches previous request" time="0.012" classname="341ReSendSameKeyExpectSameRecord"/>
+  </testsuite>
+  <testsuite name="35. Concurrent booking (race condition)" id="69dc11f2-bd75-45ac-bbee-d51b2c234d89" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="0.012">
+    <testcase name="Expected 429 Too Many Requests" time="0.012" classname="35ConcurrentBookingRaceCondition"/>
+    <testcase name="Error message is clear" time="0.012" classname="35ConcurrentBookingRaceCondition"/>
+  </testsuite>
+  <testsuite name="36. Saga transaction – success flow" id="85bdd93d-61a3-493c-a6ca-62d076e54b2b" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="0.014">
+    <testcase name="Fail-Fast: Code is not 5xx" time="0.014" classname="36SagaTransactionSuccessFlow"/>
+    <testcase name="Booking exists and is REQUESTED" time="0.014" classname="36SagaTransactionSuccessFlow"/>
+  </testsuite>
+  <testsuite name="37. Saga transaction – failure + compensation check" id="69c44768-551f-4e7b-9cdc-efbfee5f8804" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="0.036">
+    <testcase name="Fail-Fast: Code is not 5xx" time="0.036" classname="37SagaTransactionFailureCompensationCheck"/>
+    <testcase name="Returns 400 Bad Request" time="0.036" classname="37SagaTransactionFailureCompensationCheck"/>
+  </testsuite>
+  <testsuite name="37.1 Verify compensation logic" id="5da3a209-ecb2-402a-8971-b33113ee1ef1" timestamp="2026-04-18T22:10:11.530Z" tests="1" failures="0" errors="0" time="0.013">
+    <testcase name="Booking record is marked FAILED" time="0.013" classname="371VerifyCompensationLogic"/>
+  </testsuite>
+  <testsuite name="38. Kafka event consistency (outbox pattern)" id="3c236c0d-0a81-4634-b6ca-ae40a1d3ef6e" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="0.054">
+    <testcase name="Status is 201" time="0.054" classname="38KafkaEventConsistencyOutboxPattern"/>
+    <testcase name="Success is true" time="0.054" classname="38KafkaEventConsistencyOutboxPattern"/>
+  </testsuite>
+  <testsuite name="39. Partial failure (network timeout handling)" id="ad2e9b21-cfa4-40a5-b550-8941a9d05d3b" timestamp="2026-04-18T22:10:11.530Z" tests="2" failures="0" errors="0" time="1.038">
+    <testcase name="Expected 400 (Payment Timeout -> Rollback)" time="1.038" classname="39PartialFailureNetworkTimeoutHandling"/>
+    <testcase name="Error message is clear" time="1.038" classname="39PartialFailureNetworkTimeoutHandling"/>
+  </testsuite>
+  <testsuite name="40. Data integrity (Persistence check)" id="54584b76-00c8-4ab4-8076-b717ba2c7e50" timestamp="2026-04-18T22:10:11.530Z" tests="1" failures="0" errors="0" time="0.015">
+    <testcase name="Audit check passed" time="0.015" classname="40DataIntegrityPersistenceCheck"/>
+  </testsuite>
+</testsuites>

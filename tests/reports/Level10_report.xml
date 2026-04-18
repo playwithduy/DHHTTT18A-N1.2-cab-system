@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="LEVEL 10 – ZERO TRUST SECURITY" tests="5" time="0.045">
+  <testsuite name="91. Request không có token → 401" id="8ed8ca2c-f6e7-4213-838e-21397b6f3efa" timestamp="2026-04-18T22:12:05.325Z" tests="2" failures="0" errors="0" time="0.019">
+    <testcase name="Expect 401 Unauthorized" time="0.019" classname="91RequestKhongCoToken401"/>
+    <testcase name="No 5xx error" time="0.019" classname="91RequestKhongCoToken401"/>
+  </testsuite>
+  <testsuite name="92. Token không hợp lệ (tampered) → 401" id="739b6506-3b61-4bd1-89b5-862f3985eaad" timestamp="2026-04-18T22:12:05.325Z" tests="1" failures="0" errors="0" time="0.006">
+    <testcase name="Expect 401 Unauthorized" time="0.006" classname="92TokenKhongHpLTampered401"/>
+  </testsuite>
+  <testsuite name="93. Token hết hạn → 401" id="3d0327f2-d554-4b01-a819-e34b8736adc1" timestamp="2026-04-18T22:12:05.325Z" tests="1" failures="0" errors="0" time="0.004">
+    <testcase name="Expect 401 Unauthorized" time="0.004" classname="93TokenHtHn401"/>
+  </testsuite>
+  <testsuite name="95. RBAC – User truy cập Admin API → 403" id="eaa3a6ec-dad3-4ce0-b4a2-d6386f6f5fbe" timestamp="2026-04-18T22:12:05.325Z" tests="1" failures="0" errors="0" time="0.006">
+    <testcase name="Forbidden for non-admin role (403)" time="0.006" classname="95RbacUserTruyCpAdminApi403"/>
+  </testsuite>
+  <testsuite name="96. Cross-Tenant – Driver truy cập user booking → 403" id="a1367b57-a7f7-43d8-86e9-246910f25636" timestamp="2026-04-18T22:12:05.325Z" tests="1" failures="0" errors="0" time="0.010">
+    <testcase name="Unauthorized or Forbidden access to other's data" time="0.010" classname="96CrossTenantDriverTruyCpUserBooking403"/>
+  </testsuite>
+</testsuites>

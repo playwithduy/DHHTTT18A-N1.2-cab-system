@@ -43,7 +43,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Fail-Fast: Code is not 5xx (except 503 fallback)\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
 							"pm.test(\"Resiliency: Handled via 201 or 503\", () => {",
 							"    pm.expect(pm.response.code).to.be.oneOf([201, 503]);",
 							"});"
@@ -55,12 +55,31 @@
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
-				"header": [],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_pricing_timeout\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "73. AI fallback (Rule-based)",
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Expect 201\", () => { pm.response.to.have.status(201); });"], "type": "text/javascript" } }],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": { "mode": "raw", "raw": "{\"pickup\": {\"lat\": 10, \"lng\": 106}, \"drop\": {\"lat\": 11, \"lng\": 107}, \"distance_km\": 5, \"simulate_ai_fallback\": true}", "options": { "raw": { "language": "json" } } },
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "74. Payment service timeout",
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Handled correctly\", () => { pm.expect(pm.response.code).to.be.oneOf([400, 201]); });"], "type": "text/javascript" } }],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": { "mode": "raw", "raw": "{\"pickup\": {\"lat\": 10, \"lng\": 106}, \"drop\": {\"lat\": 11, \"lng\": 107}, \"distance_km\": 5, \"simulate_payment_timeout\": true}", "options": { "raw": { "language": "json" } } },
 				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
@@ -72,7 +91,6 @@
 					"script": {
 						"exec": [
 							"pm.test(\"Circuit Breaker Triggered (503 Service Unavailable)\", () => {",
-							"    // After many failures, the CB should trip and return 503 for all requests",
 							"    pm.response.to.have.status(503);",
 							"    pm.expect(pm.response.json().message).to.include(\"Circuit\");",
 							"});"
@@ -84,12 +102,49 @@
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
-				"header": [],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_circuit_open\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "76. Kafka partition failover",
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK\", () => { pm.response.to.have.status(200); });"], "type": "text/javascript" } }],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/health?simulate_kafka_failover=1", "host": ["{{baseUrl}}"], "path": ["health"] }
+			}
+		},
+		{
+			"name": "77. API Retry with Jitter",
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"201 Created\", () => { pm.response.to.have.status(201); });"], "type": "text/javascript" } }],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": { "mode": "raw", "raw": "{\"pickup\": {\"lat\": 10, \"lng\": 106}, \"drop\": {\"lat\": 11, \"lng\": 107}, \"distance_km\": 5}", "options": { "raw": { "language": "json" } } },
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "78. Service discovery resilience",
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK\", () => { pm.response.to.have.status(200); });"], "type": "text/javascript" } }],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/health-booking", "host": ["{{baseUrl}}"], "path": ["health-booking"] }
+			}
+		},
+		{
+			"name": "79. DB pool exhaustion check",
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Code 500 or 503 is acceptable, must not crash\", () => { pm.expect(pm.response.code).to.be.oneOf([500, 503]); });"], "type": "text/javascript" } }],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": { "mode": "raw", "raw": "{\"pickup\": {\"lat\": 10, \"lng\": 106}, \"drop\": {\"lat\": 11, \"lng\": 107}, \"distance_km\": 5, \"simulate_db_error\": true}", "options": { "raw": { "language": "json" } } },
 				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},

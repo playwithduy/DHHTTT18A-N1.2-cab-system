@@ -15,6 +15,8 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: 'notification-group' });
 
+const logs: any[] = [];
+
 const startKafka = async () => {
   await consumer.connect();
   await consumer.subscribe({ topics: ['ride_events', 'driver.assigned'], fromBeginning: false });
@@ -23,11 +25,15 @@ const startKafka = async () => {
       const data = JSON.parse(message.value?.toString() || '{}');
       if (topic === 'ride_events' && data.event_type === 'ride_requested') {
         console.log(`[notification] New ride request! Notifying nearby drivers for ride ${data.ride_id}...`);
+        logs.unshift({ type: 'notify_drivers', ...data, timestamp: new Date().toISOString() });
       } else if (topic === 'ride_events' && data.event_type === 'ride_accepted') {
         console.log(`[notification] Ride ${data.ride_id} ACCEPTED by driver ${data.driver_id}. Notifying user...`);
+        logs.unshift({ type: 'notify_user', ...data, timestamp: new Date().toISOString() });
       } else if (topic === 'driver.assigned') {
         console.log(`[notification] Driver ${data.driverId} assigned to ride ${data.bookingId}. Notifying user...`);
+        logs.unshift({ type: 'driver_assigned', ...data, timestamp: new Date().toISOString() });
       }
+      if (logs.length > 100) logs.length = 100;
     },
   });
 };
@@ -75,6 +81,8 @@ app.post('/notify', (req, res) => {
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'notification-service' }));
+
+app.get('/notifications/logs', (_req, res) => res.json({ success: true, data: logs }));
 
 const PORT = process.env.PORT || 3007;
 app.listen(PORT, () => console.log(`[notification-service] Running on port ${PORT}`));

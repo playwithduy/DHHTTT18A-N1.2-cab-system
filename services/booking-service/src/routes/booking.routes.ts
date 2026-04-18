@@ -5,6 +5,7 @@ import { idempotency } from '../middleware/idempotency.middleware';
 
 const router = Router();
 
+router.get('/outbox', bookingController.getOutbox); // For TC25
 router.post('/', idempotency, validate(createBookingSchema), bookingController.createBooking);
 router.get('/', bookingController.getBookings);
 router.get('/:id', bookingController.getBooking);
