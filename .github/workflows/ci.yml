@@ -25,8 +25,16 @@ jobs:
 
     - name: Spin up Infrastructure & Microservices
       run: |
-        # Use docker-compose.yml to build and start everything in the background
-        docker compose up -d --build
+        # 1. Start Infrastructure First
+        docker compose up -d mongodb redis zookeeper kafka
+        echo "Waiting 15s for databases to boot..."
+        sleep 15
+        
+        # 2. Initialize MongoDB Replica Set (rs0) - Required for Prisma Transactions
+        docker compose exec -T mongodb mongosh --eval "rs.initiate()" || true
+        
+        # 3. Start Core Backend Services (EXCLUDE heavy frontends to prevent Runner OOM)
+        docker compose up -d --build api-gateway auth-service booking-service ride-service driver-service payment-service pricing-service notification-service ai-matching-service fraud-service
         
     - name: Wait for Services to Warm Up
       run: |
