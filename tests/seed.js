@@ -49,6 +49,16 @@ async function seed() {
             process.exit(1);
         }
 
+        // 5. Set Driver Online (Critical for Level 1 Tests)
+        await axios.post(`${baseUrl}/drivers/status`, {
+            driver_id: DRIVER_ID,
+            status: 'ONLINE'
+        }, {
+            headers: { Authorization: `Bearer ${DRIVER_TOKEN}` }
+        }).catch((err) => {
+            console.warn('Seed Warning: Could not set driver online:', err.message);
+        });
+
         // Output ALL possible variable name aliases used across collections
         console.log([
             `--env-var "accessToken=${USER_TOKEN}"`,
