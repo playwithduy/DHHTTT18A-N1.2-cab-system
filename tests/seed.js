@@ -35,7 +35,8 @@ async function seed() {
         const DRIVER_ID = driverLogin.data.data.user.id || driverLogin.data.data.user._id;
 
         // Return outputs so bash can use them
-        console.log(`--env-var "accessToken=${USER_TOKEN}" --env-var "USER_TOKEN=${USER_TOKEN}" --env-var "DRIVER_TOKEN=${DRIVER_TOKEN}" --env-var "driverId=${DRIVER_ID}"`);
+        // Output all possible aliases used in the collections: accessToken, access_token, USER_TOKEN, token
+        console.log(`--env-var "accessToken=${USER_TOKEN}" --env-var "access_token=${USER_TOKEN}" --env-var "token=${USER_TOKEN}" --env-var "USER_TOKEN=${USER_TOKEN}" --env-var "DRIVER_TOKEN=${DRIVER_TOKEN}" --env-var "driverId=${DRIVER_ID}" --env-var "DRIVER_ID=${DRIVER_ID}"`);
     } catch (err) {
         console.error('Seed Error:', err.message);
         process.exit(1);
