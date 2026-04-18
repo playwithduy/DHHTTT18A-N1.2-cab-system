@@ -14,10 +14,10 @@ app.use(express.json());
 const MODEL_VERSION = 'v1.0.5-fraud';
 
 const fraudCheckSchema = z.object({
-  user_id: z.string().optional(),
+  user_id: z.string(),
   driver_id: z.string().optional(),
   booking_id: z.string().optional(),
-  amount: z.number().positive().optional(),
+  amount: z.number().positive(),
   location: z.object({ lat: z.number(), lng: z.number() }).optional(),
 });
 

@@ -23,7 +23,10 @@ export const validate = (schema: z.ZodObject<any, any>) =>
       return next();
     } catch (error: any) {
       const issues = error.issues || (error && error.errors) || [];
-      const isMissingField = issues.some((e: any) => e.code === 'invalid_type' && e.received === 'undefined');
+      const isMissingField = issues.some((e: any) => 
+        e.code === 'invalid_type' && 
+        (e.received === 'undefined' || (e.message && e.message.includes('received undefined')))
+      );
       const status = isMissingField ? 400 : 422;
 
       return res.status(status).json({

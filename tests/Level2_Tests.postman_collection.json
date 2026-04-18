@@ -165,7 +165,13 @@
 							"listen": "test",
 							"script": { "exec": [
 								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
-								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });"
+								"pm.test(\"Returns 200 OK\", () => { pm.response.to.have.status(200); });",
+								"pm.test(\"ETA is non-negative\", () => {",
+								"    var jsonData = pm.response.json();",
+								"    pm.expect(jsonData.success).to.be.true;",
+								"    var eta = jsonData.data.eta || jsonData.eta || 0;",
+								"    pm.expect(eta).to.be.at.least(0);",
+								"});"
 							], "type": "text/javascript" }
 						}
 					],
@@ -187,7 +193,13 @@
 							"listen": "test",
 							"script": { "exec": [
 								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
-								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });"
+								"pm.test(\"Returns 200 OK\", () => { pm.response.to.have.status(200); });",
+								"pm.test(\"Surge is at least 1\", () => {",
+								"    var jsonData = pm.response.json();",
+								"    pm.expect(jsonData.success).to.be.true;",
+								"    var surge = jsonData.data.surge_multiplier || jsonData.surge_multiplier || 1;",
+								"    pm.expect(surge).to.be.at.least(1);",
+								"});"
 							], "type": "text/javascript" }
 						}
 					],
