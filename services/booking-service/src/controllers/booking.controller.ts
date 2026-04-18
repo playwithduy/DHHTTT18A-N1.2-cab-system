@@ -143,6 +143,7 @@ export const createBooking = async (req: Request, res: Response) => {
 
     // Phase 2: Payment
     let paymentSuccess = false;
+    let paymentErrorMsg = 'Unknown payment error';
     try {
       const paymentRes = await axios.post(`${SERVICE_URLS.PAYMENT_SERVICE}/payments`, { 
         bookingId: result.id, amount: price, userId, 
@@ -158,12 +159,13 @@ export const createBooking = async (req: Request, res: Response) => {
       if (paymentRes.data.success) paymentSuccess = true;
     } catch (err: any) {
       console.error(`[booking-service] Payment failed:`, err.message);
+      paymentErrorMsg = err.response?.data?.message || err.message;
     }
 
     if (!paymentSuccess) {
       await prisma.booking.update({ where: { id: result.id }, data: { status: 'FAILED' } });
       await redis.del(lockKey);
-      return res.status(400).json({ success: false, message: 'Payment failed', data: { id: result.id, status: 'FAILED' } });
+      return res.status(400).json({ success: false, message: 'Payment failed: ' + paymentErrorMsg, data: { id: result.id, status: 'FAILED' } });
     }
 
     // Phase 3: Finalize

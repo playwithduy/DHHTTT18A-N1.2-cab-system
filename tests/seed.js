@@ -60,16 +60,17 @@ async function seed() {
         });
 
         // Output ALL possible variable name aliases used across collections
+        const USER_ID = userLogin.data.data?.user?.id || userLogin.data?.data?.user?._id || userLogin.data?.user_id || 'test-user-id';
         console.log([
             `--env-var "accessToken=${USER_TOKEN}"`,
             `--env-var "access_token=${USER_TOKEN}"`,
             `--env-var "token=${USER_TOKEN}"`,
             `--env-var "USER_TOKEN=${USER_TOKEN}"`,
+            `--env-var "userId=${USER_ID}"`,
+            `--env-var "USER_ID=${USER_ID}"`,
             `--env-var "DRIVER_TOKEN=${DRIVER_TOKEN || USER_TOKEN}"`,
             `--env-var "driverId=${DRIVER_ID}"`,
-            `--env-var "DRIVER_ID=${DRIVER_ID}"`,
-            `--env-var "BOOKING_ID=test-booking-id"`,
-            `--env-var "bookingId=test-booking-id"`,
+            `--env-var "DRIVER_ID=${DRIVER_ID}"`
         ].join(' '));
     } catch (err) {
         console.error('Seed Error:', err.message, err.response?.data || '');
