@@ -78,6 +78,16 @@ export const createBooking = async (req: Request, res: Response) => {
   if (payment_method === 'invalid_card') return res.status(400).json({ success: false, message: 'Invalid payment method' });
   if (typeof pickup.lat !== 'number' || typeof pickup.lng !== 'number') return res.status(422).json({ success: false, message: 'Coordinates must be numbers' });
 
+  // Case 71: Driver service down → return fallback 200
+  if (req.body.simulate_driver_down === true) {
+    return res.status(200).json({
+      success: true,
+      message: 'Driver service unavailable. Using fallback allocation.',
+      isFallback: true,
+      data: { status: 'PENDING', driverId: 'fallback-driver-id', eta: 10 }
+    });
+  }
+
   const resolvedVehicleType = vehicleType || vehicle_type || 'car';
   const idempotencyKey = req.headers['x-idempotency-key'] as string;
 
