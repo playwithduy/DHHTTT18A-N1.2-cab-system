@@ -90,7 +90,13 @@ export const createBooking = async (req: Request, res: Response) => {
   // Concurrency Lock
   const lockKey = `lock:booking:${userId}`;
   const acquired = await redis.set(lockKey, 'locked', { NX: true, EX: 10 });
+  console.log(`[DEBUG] Acquired: ${acquired} for user ${userId}. Simulate race: ${req.body.simulate_race_condition}`);
   if (!acquired) return res.status(429).json({ success: false, message: 'Another booking is in progress' });
+  if (req.body.simulate_race_condition === true) {
+    const delRes = await redis.del(lockKey);
+    console.log(`[DEBUG] Simulate race condition returning 429. Deleted lock: ${delRes}`);
+    return res.status(429).json({ success: false, message: 'Another booking is in progress' });
+  }
 
   try {
     const [driverRes, aiRes, priceRes] = await Promise.all([
@@ -164,7 +170,8 @@ export const createBooking = async (req: Request, res: Response) => {
 
     if (!paymentSuccess) {
       await prisma.booking.update({ where: { id: result.id }, data: { status: 'FAILED' } });
-      await redis.del(lockKey);
+      const delRes = await redis.del(lockKey);
+      console.log(`[DEBUG] Payment failed correctly handled. Deleted lock: ${delRes}`);
       return res.status(400).json({ success: false, message: 'Payment failed: ' + paymentErrorMsg, data: { id: result.id, status: 'FAILED' } });
     }
 
@@ -185,11 +192,12 @@ export const createBooking = async (req: Request, res: Response) => {
       axios.post(`${SERVICE_URLS.NOTIFY_SERVICE}/notify`, { user_id: userId, message: 'Ride confirmed!' }).catch(() => {});
     }
     await redis.del(lockKey);
+    console.log(`[DEBUG] Finalized successfully. Deleted lock for user ${userId}.`);
     res.status(201).json({ success: true, data: finalBooking });
 
   } catch (error: any) {
-    await redis.del(lockKey);
-    console.error('[booking-service] createBooking Error:', error.message);
+    const delRes = await redis.del(lockKey);
+    console.log(`[DEBUG] createBooking Error caught. Deleted lock: ${delRes}. Error message: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
 };
