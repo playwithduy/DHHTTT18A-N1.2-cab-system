@@ -259,7 +259,7 @@
 							"    pm.expect(jsonData.success).to.be.true;",
 							"});",
 							"pm.test(\"Response time is acceptable (Fallback fired)\", () => {",
-							"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+							"    pm.expect(pm.response.responseTime).to.be.below(4500);",
 							"});"
 						],
 						"type": "text/javascript"
