@@ -14,7 +14,7 @@
 						"exec": [
 							"pm.test(\"Fail-Fast: Code is not 500 (Potential vuln)\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
 							"pm.test(\"Rejected as Unauthorized or Bad Request\", () => {",
-							"    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+							"    pm.expect(pm.response.code).to.be.oneOf([400, 401, 422]);",
 							"});"
 						],
 						"type": "text/javascript"

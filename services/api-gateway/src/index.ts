@@ -121,6 +121,14 @@ app.get('/metrics', getMetrics);
 app.use('/auth/register', proxy(services.auth, getProxyOptions()));
 app.use('/auth/login', proxy(services.auth, getProxyOptions()));
 
+app.use('/health-booking', proxy(services.booking, { 
+  proxyReqPathResolver: () => '/health',
+  proxyReqOptDecorator: (proxyReqOpts: any) => {
+    proxyReqOpts.headers['x-gateway-secret'] = GATEWAY_SECRET;
+    return proxyReqOpts;
+  }
+}));
+
 // ─── Protected Routes (Auth Required) ─── Apply Security Middlewares ───
 app.use(verifyToken);
 app.use(leastPrivilegeCheck);

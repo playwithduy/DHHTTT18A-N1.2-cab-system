@@ -4,6 +4,16 @@
 		"name": "LEVEL 12 – MONITORING & OBSERVABILITY",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
 	"item": [
 		{
 			"name": "111. Logging & Distrubuted Tracing (Header Check)",
@@ -85,6 +95,7 @@
 		}
 	],
 	"variable": [
-		{ "key": "baseUrl", "value": "http://localhost:8080" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" }
 	]
 }

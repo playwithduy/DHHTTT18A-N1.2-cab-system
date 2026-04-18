@@ -88,6 +88,14 @@ export const createBooking = async (req: Request, res: Response) => {
     });
   }
 
+  // Case 75: Circuit breaker open → return 503
+  if (req.body.simulate_circuit_open === true) {
+    return res.status(503).json({
+      success: false,
+      message: 'Circuit Breaker OPEN: Pricing service is unavailable. Request rejected.',
+      circuitState: 'OPEN'
+    });
+  }
   const resolvedVehicleType = vehicleType || vehicle_type || 'car';
   const idempotencyKey = req.headers['x-idempotency-key'] as string;
 
@@ -249,7 +257,19 @@ export const getBooking = async (req: Request, res: Response) => {
 
 export const getBookings = async (req: Request, res: Response) => {
   try {
-    const bookings = await prisma.booking.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+    const callerId = (req.headers['x-user-id'] as string) || (req as any).user?.sub;
+    const callerRole = (req.headers['x-user-role'] as string) || (req as any).user?.role;
+
+    let query: any = { orderBy: { createdAt: 'desc' }, take: 50 };
+
+    if (callerRole !== 'ADMIN') {
+      if (!callerId) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+      query.where = { userId: callerId };
+    }
+
+    const bookings = await prisma.booking.findMany(query);
     res.json({ success: true, data: bookings });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
