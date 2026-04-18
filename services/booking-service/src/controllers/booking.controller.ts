@@ -194,7 +194,18 @@ export const createBooking = async (req: Request, res: Response) => {
 
 export const getBooking = async (req: Request, res: Response) => {
   try {
-    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    const { id } = req.params;
+
+    // Item 109: Fail-Fast Validation for ObjectId format
+    if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      console.warn(`[VALIDATION] Malformed booking ID requested: ${id}`);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Mã đặt chuyến không hợp lệ (Invalid ObjectId format)' 
+      });
+    }
+
+    const booking = await prisma.booking.findUnique({ where: { id } });
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     
     const callerId = (req.headers['x-user-id'] as string) || (req as any).user?.sub;
