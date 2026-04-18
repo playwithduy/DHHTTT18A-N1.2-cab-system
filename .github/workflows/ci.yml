@@ -30,21 +30,24 @@ jobs:
         
     - name: Wait for Services to Warm Up
       run: |
-        echo "Waiting for 60 seconds to let Postgres, Kafka and Node services initialize..."
+        echo "Waiting for Postgres, Kafka and Node services to initialize..."
         
-        # Robust Wait Loop (up to 2 minutes)
-        for i in {1..24}; do
-          if curl -s http://localhost:8080/health > /dev/null; then
-            echo "API Gateway isolated successfully!"
+        # Robust Wait Loop (up to 2-3 minutes) - checking all core ports
+        for i in {1..30}; do
+          if curl -s http://localhost:8080/health > /dev/null && \
+             curl -s http://localhost:3002/health > /dev/null && \
+             curl -s http://localhost:3005/health > /dev/null; then
+            echo "✅ API Gateway, Booking, and Payment Services are ALL UP!"
             break
           fi
-          echo "Waiting... $i/24"
+          echo "Waiting for services... $i/30"
           sleep 5
         done
         
         # Verify Core Services one last time or print logs and fail
-        curl -f http://localhost:8080/health || (echo "Gateway failed. Printing logs:" && docker compose logs && exit 1)
-        curl -f http://localhost:3002/health || (echo "Booking failed." && exit 1)
+        curl -s -f http://localhost:8080/health > /dev/null || (echo "Gateway failed. Logs:" && docker compose logs api-gateway && exit 1)
+        curl -s -f http://localhost:3002/health > /dev/null || (echo "Booking failed. Logs:" && docker compose logs booking-service && exit 1)
+        curl -s -f http://localhost:3005/health > /dev/null || (echo "Payment failed. Logs:" && docker compose logs payment-service && exit 1)
         
     - name: Run JS Integration Test Scripts (White-box Testing)
       run: |
