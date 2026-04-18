@@ -90,6 +90,40 @@
 			"name": "96. Cross-Tenant – Driver truy cập user booking → 403",
 			"event": [
 				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const postReq = {",
+							"    url: pm.variables.get(\"baseUrl\") + '/bookings',",
+							"    method: 'POST',",
+							"    header: {",
+							"        'Content-Type': 'application/json',",
+							"        'Authorization': 'Bearer ' + pm.variables.get(\"accessToken\")",
+							"    },",
+							"    body: {",
+							"        mode: 'raw',",
+							"        raw: JSON.stringify({",
+							"            pickup: { lat: 10, lng: 106 },",
+							"            drop: { lat: 11, lng: 107 },",
+							"            distance_km: 5,",
+							"            vehicleType: 'car',",
+							"            payment_method: 'cash'",
+							"        })",
+							"    }",
+							"};",
+							"pm.sendRequest(postReq, (err, res) => {",
+							"    if (!err) {",
+							"        const jsonData = res.json();",
+							"        if (jsonData && jsonData.data && jsonData.data.id) {",
+							"            pm.collectionVariables.set(\"bookingId\", jsonData.data.id);",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
 					"listen": "test",
 					"script": {
 						"exec": [
@@ -102,7 +136,7 @@
 				}
 			],
 			"request": {
-				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{DRIVER_TOKEN}}", "type": "string" }] },
 				"method": "GET",
 				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
 			}
