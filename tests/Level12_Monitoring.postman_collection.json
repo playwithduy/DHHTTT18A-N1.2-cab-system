@@ -1,19 +1,23 @@
 {
 	"info": {
-		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1112",
-		"name": "LEVEL 12: MONITORING TESTCASES - Giám sát hệ thống (Observability / Monitoring Testing)",
+		"_postman_id": "level12-monitoring-observability",
+		"name": "LEVEL 12 – MONITORING & OBSERVABILITY",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "111. Logging đầy đủ request",
+			"name": "111. Logging & Distrubuted Tracing (Header Check)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"X-Trace-ID header exists\", function () { pm.expect(pm.response.headers.get('X-Trace-ID')).to.be.ok; });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"pm.test(\"Tracing Header exists (X-Trace-ID)\", () => {",
+							"    var traceId = pm.response.headers.get('X-Trace-ID') || pm.response.headers.get('x-trace-id');",
+							"    pm.expect(traceId).to.be.ok;",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -22,25 +26,21 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/health",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "8080",
-					"path": ["health"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+			}
 		},
 		{
-			"name": "113. Metrics được expose",
+			"name": "113. Metrics Exposure check",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"Metrics format is correct\", function () { pm.expect(pm.response.text()).to.include(\"cabgo_\"); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"pm.test(\"Contains domain-specific metrics\", () => {",
+							"    pm.expect(pm.response.text()).to.include(\"cabgo_\");",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -49,26 +49,24 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/metrics",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "8080",
-					"path": ["metrics"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] }
+			}
 		},
 		{
-			"name": "118. AI service monitoring",
+			"name": "118. AI Observability check (Latency & Version)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"Contains modelVersion\", function () { pm.expect(pm.response.json().modelVersion).to.be.ok; });",
-							"pm.test(\"Contains latencyMs\", function () { pm.expect(pm.response.json().latencyMs).to.be.a('number'); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Observability Metadata exists\", () => {",
+							"    var data = jsonData.data || jsonData;",
+							"    pm.expect(data.modelVersion || data.version).to.be.ok;",
+							"    pm.expect(data.latencyMs || data.responseTime).to.be.a('number');",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -82,15 +80,8 @@
 					"raw": "{\"pickup\":{\"lat\":10,\"lng\":106},\"distance_km\":5}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": {
-					"raw": "http://localhost:3008/match",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "3008",
-					"path": ["match"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
+			}
 		}
 	],
 	"variable": [

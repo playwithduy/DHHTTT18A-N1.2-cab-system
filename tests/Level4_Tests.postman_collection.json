@@ -12,25 +12,23 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 201 or 200\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-							"});",
+							"pm.test(\"Fail-Fast: Code is not unexpected 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Booking created successfully\", () => { pm.response.to.have.status(201); });",
 							"var jsonData = pm.response.json();",
-							"if (jsonData.success) {",
-							"    pm.environment.set(\"last_booking_id\", jsonData.data.id || jsonData.data.booking_id);",
-							"    pm.test(\"Status is REQUESTED\", function () {",
-							"        pm.expect(jsonData.data.status).to.eql(\"REQUESTED\");",
-							"    });",
-							"}"
+							"pm.test(\"Status is REQUESTED\", () => {",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.data.status).to.eql(\"REQUESTED\");",
+							"});",
+							"pm.collectionVariables.set(\"lastBookingId\", jsonData.data.id || jsonData.data.booking_id);"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "idemp-31-{{$randomInt}}" }
 				],
 				"body": {
@@ -38,22 +36,20 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
-			"name": "32. Rollback khi lỗi giữa chừng",
+			"name": "32. Rollback khi lỗi giữa chừng (DB Error)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 500 or 400\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([400, 500]);",
-							"});",
-							"pm.test(\"Error message matches\", function () {",
-							"    var msg = pm.response.json().message || pm.response.json().error || '';",
-							"    pm.expect(msg.length).to.be.above(0);",
+							"pm.test(\"Expected Simulated DB Error (500)\", () => { pm.response.to.have.status(500); });",
+							"pm.test(\"Error message is clear\", () => {",
+							"    var msg = pm.response.json().message || '';",
+							"    pm.expect(msg).to.include(\"DB_ERROR\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -61,9 +57,9 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "rollback-32-{{$randomInt}}" }
 				],
 				"body": {
@@ -71,7 +67,7 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_db_error\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
@@ -81,11 +77,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 400 or 201\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]);",
-							"});",
-							"pm.test(\"Booking marked as FAILED or REQUESTED\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]);",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Booking marked as FAILED\", () => {",
+							"    pm.expect(jsonData.success).to.be.false;",
+							"    pm.expect(jsonData.data.status).to.eql(\"FAILED\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -93,9 +90,9 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "payfail-33-{{$randomInt}}" }
 				],
 				"body": {
@@ -103,23 +100,49 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_payment_failure\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
-			"name": "34. Idempotent transaction (duplicate request)",
+			"name": "34. Idempotent transaction (duplicate check)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200 or 201 (Idempotent)\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-							"});",
-							"var jsonData = pm.response.json();",
-							"pm.test(\"Returned data is valid\", function () {",
-							"    pm.expect(jsonData.success).to.be.true;",
-							"    pm.expect(jsonData.data).to.exist;",
+							"pm.test(\"Status is 201 Created (First unique key)\", () => { pm.response.to.have.status(201); });",
+							"var firstId = pm.response.json().data.id;",
+							"pm.collectionVariables.set(\"idemp_test_id\", firstId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"header": [
+					{ "key": "x-idempotency-key", "value": "repeatable-key-unique" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "34.1 Re-send same key → expect same record",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status is 200 OK (Cached record returned)\", () => { pm.response.to.have.status(200); });",
+							"var secondId = pm.response.json().data.id;",
+							"pm.test(\"ID matches previous request\", () => {",
+							"    pm.expect(secondId).to.eql(pm.collectionVariables.get(\"idemp_test_id\"));",
 							"});"
 						],
 						"type": "text/javascript"
@@ -127,17 +150,17 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
-					{ "key": "x-idempotency-key", "value": "fixed-idemp-34" }
+					{ "key": "x-idempotency-key", "value": "repeatable-key-unique" }
 				],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
@@ -147,8 +170,9 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Expected 201 or 429\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([201, 429]);",
+							"pm.test(\"Expected 429 Too Many Requests\", () => { pm.response.to.have.status(429); });",
+							"pm.test(\"Error message is clear\", () => {",
+							"    pm.expect(pm.response.json().message).to.include(\"in progress\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -156,9 +180,9 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "race-35-{{$randomInt}}" }
 				],
 				"body": {
@@ -166,7 +190,7 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
@@ -176,8 +200,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Booking exists and is REQUESTED or in progress\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 404, 500]);",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Booking exists and is REQUESTED\", () => {",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(pm.response.json().data.status).to.eql(\"REQUESTED\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -185,33 +211,31 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
-				"url": { "raw": "{{base_url}}/bookings/{{last_booking_id}}", "host": ["{{base_url}}"], "path": ["bookings", "{{last_booking_id}}"] }
+				"url": { "raw": "{{baseUrl}}/bookings/{{lastBookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{lastBookingId}}"] }
 			}
 		},
 		{
-			"name": "37. Saga transaction – failure + compensation",
+			"name": "37. Saga transaction – failure + compensation check",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 400 or 500\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]);",
-							"});",
-							"pm.test(\"Compensation: FAILED status returned\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]);",
-							"});"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });",
+							"var jsonData = pm.response.json();",
+							"pm.collectionVariables.set(\"failedBookingId\", jsonData.data.id || jsonData.data.booking_id);"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "saga-fail-37-{{$randomInt}}" }
 				],
 				"body": {
@@ -219,7 +243,29 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_payment_failure\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "37.1 Verify compensation logic",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Booking record is marked FAILED\", () => {",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(pm.response.json().data.status).to.eql(\"FAILED\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/bookings/{{failedBookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{failedBookingId}}"] }
 			}
 		},
 		{
@@ -229,21 +275,17 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-							"});",
-							"pm.test(\"Outbox worker should process this event\", function () {",
-							"    pm.expect(pm.response.json().success).to.be.true;",
-							"});"
+							"pm.test(\"Status is 201\", () => { pm.response.to.have.status(201); });",
+							"pm.test(\"Success is true\", () => { pm.expect(pm.response.json().success).to.be.true; });"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "outbox-38-{{$randomInt}}" }
 				],
 				"body": {
@@ -251,22 +293,20 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
-			"name": "39. Partial failure (network issue)",
+			"name": "39. Partial failure (network timeout handling)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 400 or 201 (Timeout handled)\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]);",
-							"});",
-							"pm.test(\"Error message is clear\", function () {",
-							"    var msg = pm.response.json().message || pm.response.json().error || '';",
-							"    pm.expect(msg.length).to.be.above(0);",
+							"pm.test(\"Expected 400 (Payment Timeout -> Rollback)\", () => { pm.response.to.have.status(400); });",
+							"pm.test(\"Error message is clear\", () => {",
+							"    var msg = pm.response.json().message;",
+							"    pm.expect(msg).to.include(\"Payment failed\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -274,9 +314,9 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
-					{ "key": "Authorization", "value": "Bearer {{access_token}}" },
 					{ "key": "x-idempotency-key", "value": "timeout-39-{{$randomInt}}" }
 				],
 				"body": {
@@ -284,18 +324,19 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_payment_timeout\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
-			"name": "40. Data integrity (ACID)",
+			"name": "40. Data integrity (Persistence check)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Audit check passed\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]);",
+							"pm.test(\"Audit check passed\", () => {",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(pm.response.json().data).to.be.an('array');",
 							"});"
 						],
 						"type": "text/javascript"
@@ -303,25 +344,17 @@
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
-				"url": { "raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"] }
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		}
 	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": { "type": "text/javascript", "exec": [""] }
-		},
-		{
-			"listen": "test",
-			"script": { "type": "text/javascript", "exec": [""] }
-		}
-	],
 	"variable": [
-		{ "key": "base_url", "value": "http://localhost:8080" },
-		{ "key": "access_token", "value": "YOUR_TOKEN_HERE" },
-		{ "key": "last_booking_id", "value": "" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" },
+		{ "key": "lastBookingId", "value": "" },
+		{ "key": "failedBookingId", "value": "" },
+		{ "key": "idemp_test_id", "value": "" }
 	]
 }

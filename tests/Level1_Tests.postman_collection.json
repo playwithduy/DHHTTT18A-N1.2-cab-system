@@ -12,10 +12,16 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Registration returns 201 Created\", () => { pm.response.to.have.status(201); });",
 							"var jsonData = pm.response.json();",
-							"if (jsonData.user_id) {",
-							"    pm.collectionVariables.set(\"userId\", jsonData.user_id);",
-							"}"
+							"pm.test(\"Schema Validation: Registration Success\", () => {",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.user_id).to.be.a('string');",
+							"    pm.expect(jsonData.data.access_token).to.be.a('string');",
+							"});",
+							"pm.collectionVariables.set(\"userId\", jsonData.user_id);",
+							"pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);"
 						],
 						"type": "text/javascript"
 					}
@@ -53,7 +59,13 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Login returns 200 OK\", () => { pm.response.to.have.status(200); });",
 							"var jsonData = pm.response.json();",
+							"pm.test(\"Schema Validation: Login Success\", () => {",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.data.access_token).to.be.a('string');",
+							"});",
 							"pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);",
 							"pm.collectionVariables.set(\"userId\", jsonData.data.user.id);"
 						],
@@ -93,10 +105,15 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Booking creation returns 201 Created\", () => { pm.response.to.have.status(201); });",
 							"var jsonData = pm.response.json();",
-							"if (jsonData.data && jsonData.data.booking_id) {",
-							"    pm.collectionVariables.set(\"bookingId\", jsonData.data.booking_id);",
-							"}"
+							"pm.test(\"Schema Validation: Booking Created\", () => {",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.data.id).to.be.a('string');",
+							"    pm.expect(jsonData.data.status).to.eql(\"REQUESTED\");",
+							"});",
+							"pm.collectionVariables.set(\"bookingId\", jsonData.data.id);"
 						],
 						"type": "text/javascript"
 					}
@@ -138,6 +155,23 @@
 		},
 		{
 			"name": "4. Lấy danh sách booking của user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Get bookings returns 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Schema Validation: Data is array\", () => {",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.data).to.be.an('array');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -167,10 +201,23 @@
 					]
 				}
 			},
-			"response": []
+			"init_response": []
 		},
 		{
 			"name": "5. Driver chuyển trạng thái online",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Update driver status returns 200 OK\", () => { pm.response.to.have.status(200); });",
+							"pm.test(\"Success is true\", () => { pm.expect(pm.response.json().success).to.be.true; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -208,6 +255,23 @@
 		},
 		{
 			"name": "6. Booking được tạo với status = REQUESTED",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Get booking status returns 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Status is REQUESTED\", () => {",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.data.status).to.eql(\"REQUESTED\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -236,6 +300,23 @@
 		},
 		{
 			"name": "7. Gọi API ETA trả về giá trị > 0",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"ETA returns 200 OK or 201\", () => { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"ETA is logical (> 0)\", () => {",
+							"    var eta = jsonData.data.eta || jsonData.eta;",
+							"    pm.expect(eta).to.be.above(0);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -272,6 +353,23 @@
 		},
 		{
 			"name": "8. Pricing API trả về giá hợp lệ",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Pricing returns 200 OK or 201\", () => { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Price is valid (> 0)\", () => {",
+							"    var price = jsonData.data.price || jsonData.data.final_price || jsonData.price;",
+							"    pm.expect(price).to.be.above(0);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -308,6 +406,18 @@
 		},
 		{
 			"name": "9. Notification gửi thành công",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Notification request success\", () => { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -344,6 +454,18 @@
 		},
 		{
 			"name": "10. Logout invalidate token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Logout returns 200 OK\", () => { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",

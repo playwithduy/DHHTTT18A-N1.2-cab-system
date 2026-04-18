@@ -1,19 +1,23 @@
 {
 	"info": {
-		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1111",
-		"name": "LEVEL 11 - DEPLOYMENT",
+		"_postman_id": "level11-deployment-readiness",
+		"name": "LEVEL 11 – DEPLOYMENT & READINESS",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "101. Deploy service thành công (basic)",
+			"name": "101. Deployment Readiness Check (Booking Service)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"Service is booking-service\", function () { pm.expect(pm.response.json().service).to.eql(\"booking-service\"); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Check booking-service health\", () => {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.service || jsonData.data.service).to.eql(\"booking-service\");",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -22,24 +26,22 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": {
-					"raw": "http://localhost:3002/health",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "3002",
-					"path": ["health"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+			}
 		},
 		{
-			"name": "102. Health check endpoint",
+			"name": "Metrics Check: Prometheus Schema Validation",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"pm.test(\"Metrics Data format is valid\", () => {",
+							"    var body = pm.response.text();",
+							"    pm.expect(body).to.satisfy((t) => t.includes('# HELP') || t.includes('cabgo_') || t.includes('process_'));",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -48,69 +50,8 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/health",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "8080",
-					"path": ["health"]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "109. Config sai → fail fast",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"Response confirms startup validation\", function () { pm.expect(pm.response.json().status).to.eql(\"ok\"); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3002/health",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "3002",
-					"path": ["health"]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Metrics: Prometheus Data",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"Contains prometheus metrics\", function () { var b = pm.response.text(); pm.expect(b).to.satisfy(function(t){ return t.includes('# HELP') || t.includes('cabgo_') || t.includes('process_cpu'); }); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3002/metrics",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "3002",
-					"path": ["metrics"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] }
+			}
 		}
 	],
 	"variable": [

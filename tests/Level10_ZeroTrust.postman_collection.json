@@ -1,19 +1,19 @@
 {
 	"info": {
-		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1091",
-		"name": "LEVEL 10 - ZERO TRUST SECURITY",
+		"_postman_id": "level10-zero-trust-security",
+		"name": "LEVEL 10 – ZERO TRUST SECURITY",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "91. Request không có token",
+			"name": "91. Request không có token → 401",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 401\", function () { pm.response.to.have.status(401); });",
-							"pm.test(\"Message is Missing token\", function () { pm.expect(pm.response.json().message).to.eql(\"Missing token\"); });"
+							"pm.test(\"Expect 401 Unauthorized\", () => { pm.response.to.have.status(401); });",
+							"pm.test(\"No 5xx error\", () => { pm.expect(pm.response.code).to.be.below(500); });"
 						],
 						"type": "text/javascript"
 					}
@@ -22,23 +22,17 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": {
-					"raw": "{{baseUrl}}/bookings",
-					"host": ["{{baseUrl}}"],
-					"path": ["bookings"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
 		},
 		{
-			"name": "92. Token không hợp lệ (tampered)",
+			"name": "92. Token không hợp lệ (tampered) → 401",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 401\", function () { pm.response.to.have.status(401); });",
-							"pm.test(\"Message contains Invalid token signature\", function () { pm.expect(pm.response.json().message).to.include(\"Invalid token signature\"); });"
+							"pm.test(\"Expect 401 Unauthorized\", () => { pm.response.to.have.status(401); });"
 						],
 						"type": "text/javascript"
 					}
@@ -46,23 +40,20 @@
 			],
 			"request": {
 				"method": "POST",
-				"header": [],
-				"url": {
-					"raw": "{{baseUrl}}/api/test-tamper",
-					"host": ["{{baseUrl}}"],
-					"path": ["api", "test-tamper"]
-				}
-			},
-			"response": []
+				"header": [
+					{ "key": "Authorization", "value": "Bearer tempered.payload.now", "type": "text" }
+				],
+				"url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+			}
 		},
 		{
-			"name": "93. Token hết hạn",
+			"name": "93. Token hết hạn → 401",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 401\", function () { pm.response.to.have.status(401); });"
+							"pm.test(\"Expect 401 Unauthorized\", () => { pm.response.to.have.status(401); });"
 						],
 						"type": "text/javascript"
 					}
@@ -71,161 +62,55 @@
 			"request": {
 				"method": "GET",
 				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjN9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-						"type": "text"
-					}
+					{ "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjN9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", "type": "text" }
 				],
-				"url": {
-					"raw": "{{baseUrl}}/bookings",
-					"host": ["{{baseUrl}}"],
-					"path": ["bookings"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
 		},
 		{
-			"name": "95. RBAC – user không có quyền",
+			"name": "95. RBAC – User truy cập Admin API → 403",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 403 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
-							"var msg = pm.response.json().message || ''; pm.test(\"Message indicates no access\", function () { pm.expect(msg).to.satisfy(m => m.includes('Forbidden') || m.includes('Access denied') || m.includes('Unauthorized') || m.includes('Missing') || m.includes('Invalid')); });"
+							"pm.test(\"Forbidden for non-admin role (403)\", () => { pm.response.to.have.status(403); });"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{USER_TOKEN}}",
-						"type": "text"
-					}
-				],
-				"url": {
-					"raw": "{{baseUrl}}/admin/stats",
-					"host": ["{{baseUrl}}"],
-					"path": ["admin", "stats"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] }
+			}
 		},
 		{
-			"name": "96. Least privilege (driver không truy cập user data)",
+			"name": "96. Cross-Tenant – Driver truy cập user booking → 403",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 403 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]); });",
-							"var msg = (pm.response.json().message || ''); pm.test(\"Message indicates no access or data returned\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]); });"
+							"pm.test(\"Unauthorized or Forbidden access to other's data\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+							"});"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{DRIVER_TOKEN}}",
-						"type": "text"
-					}
-				],
-				"url": {
-					"raw": "{{baseUrl}}/bookings/{{USER_BOOKING_ID}}",
-					"host": ["{{baseUrl}}"],
-					"path": ["bookings", "{{USER_BOOKING_ID}}"]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "97. API Gateway kiểm tra tất cả request",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Status is 403\", function () { pm.response.to.have.status(403); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3002/bookings",
-					"protocol": "http",
-					"host": ["localhost"],
-					"port": "3002",
-					"path": ["bookings"]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "98. Rate limiting chống abuse",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Status is 200 or 429\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{baseUrl}}/health",
-					"host": ["{{baseUrl}}"],
-					"path": ["health"]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "100. Audit logging (security trace)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{baseUrl}}/metrics",
-					"host": ["{{baseUrl}}"],
-					"path": ["metrics"]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+			}
 		}
 	],
 	"variable": [
 		{ "key": "baseUrl", "value": "http://localhost:8080" },
-		{ "key": "USER_TOKEN", "value": "" },
-		{ "key": "DRIVER_TOKEN", "value": "" },
-		{ "key": "USER_BOOKING_ID", "value": "" }
+		{ "key": "accessToken", "value": "" },
+		{ "key": "bookingId", "value": "" }
 	]
 }

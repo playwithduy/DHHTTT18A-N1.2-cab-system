@@ -6,100 +6,124 @@
 	},
 	"item": [
 		{
-			"name": "71. Driver service down → fallback",
-			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Handled via fallback\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
+			"name": "71. Driver service down → fallback check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 5xx (except 503 fallback)\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
+							"pm.test(\"Handled via fallback (200 or 503)\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+							"    if (pm.response.code === 200) {",
+							"        pm.expect(pm.response.json().success).to.be.true;",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_driver_down\": true\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "72. Pricing service timeout → retry",
-			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Handled via retry/fallback\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_pricing_timeout\": true\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "73. Kafka down → buffer event",
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_kafka_down\": true\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "74. DB failover",
-			"request": {
-				"method": "GET",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "75. Circuit breaker open",
-			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Circuit Breaker handles repetitive failures\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_pricing_timeout\": true\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "76. Partial system failure handling",
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_payment_failure\": true\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "77. Retry exponential backoff",
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
-			}
-		},
-		{
-			"name": "78. Service mesh routing fail",
-			"request": {
-				"method": "GET",
 				"header": [],
-				"url": { "raw": "http://localhost:8080/health", "host": ["http://localhost:8080"], "path": ["health"] }
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_driver_down\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
-			"name": "79. Network partition test",
+			"name": "72. Pricing service timeout → retry/fallback",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 5xx (except 503 fallback)\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
+							"pm.test(\"Resiliency: Handled via 201 or 503\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([201, 503]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_pricing_timeout\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		},
 		{
-			"name": "80. Graceful degradation",
-			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"System still performs core functions\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
+			"name": "75. Circuit breaker open (Repetitive failures)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Circuit Breaker Triggered (503 Service Unavailable)\", () => {",
+							"    // After many failures, the CB should trip and return 503 for all requests",
+							"    pm.response.to.have.status(503);",
+							"    pm.expect(pm.response.json().message).to.include(\"Circuit\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
-				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
-				"body": { "mode": "raw", "raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_stress\": true\n}", "options": { "raw": { "language": "json" } } },
-				"url": { "raw": "http://localhost:8080/bookings", "host": ["http://localhost:8080"], "path": ["bookings"] }
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_pricing_timeout\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "80. Graceful degradation check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"System still performs core functions under stress\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"    pm.expect(pm.response.json().success).to.be.true;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n  \"distance_km\": 5,\n  \"simulate_stress\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 			}
 		}
 	],
 	"variable": [
-		{ "key": "accessToken", "value": "" },
-		{ "key": "token", "value": "" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" }
 	]
 }

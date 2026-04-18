@@ -1,252 +1,134 @@
 {
 	"info": {
-		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd7afe",
-		"name": "LEVEL 9 – SECURITY TEST",
+		"_postman_id": "level9-security-deep-logic",
+		"name": "LEVEL 9 – SECURITY & DEEP LOGIC",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "81. SQL injection attempt",
+			"name": "81. SQL injection attempt (Login)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 500 (Potential vuln)\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
+							"pm.test(\"Rejected as Unauthorized or Bad Request\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
 					"raw": "{\n    \"email\": \"' OR 1=1 --\",\n    \"password\": \"anything\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
+					"options": { "raw": { "language": "json" } }
 				},
-				"url": {
-					"raw": "http://localhost:8080/auth/login",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"auth",
-						"login"
-					]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+			}
 		},
 		{
-			"name": "82. XSS input test",
+			"name": "82. XSS input test (Register)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 500\", () => { pm.expect(pm.response.code).to.not.equal(500); });",
+							"pm.test(\"Handled correctly (Sanitized or Rejected)\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([201, 400]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"hacker@test.com\",\n    \"password\": \"password123\",\n    \"name\": \"<script>alert('hack')</script>\",\n    \"phone\": \"0912345678\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
+					"raw": "{\n    \"email\": \"hacker{{$randomInt}}@test.com\",\n    \"password\": \"password123\",\n    \"name\": \"<script>alert('hack')</script>\",\n    \"phone\": \"0912345678\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+			}
+		},
+		{
+			"name": "83. JWT tampering check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Tampered JWT rejected with 401\", () => {",
+							"    pm.response.to.have.status(401);",
+							"});"
+						],
+						"type": "text/javascript"
 					}
-				},
-				"url": {
-					"raw": "http://localhost:8080/auth/register",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"auth",
-						"register"
-					]
 				}
-			},
-			"response": []
-		},
-		{
-			"name": "83. JWT tampering",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/api/test-tamper",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"api",
-						"test-tamper"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "84. Unauthorized API access",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/admin/stats",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"admin",
-						"stats"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "85. Rate limit attack",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/health",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"health"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "86. Replay attack (idempotency)",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "x-idempotency-key",
-						"value": "replay-123456",
-						"type": "text"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"pickup\": {\"lat\": 10, \"lng\": 106},\n    \"drop\": {\"lat\": 11, \"lng\": 107},\n    \"distance_km\": 5\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://localhost:8080/bookings",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"bookings"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "87. Data encryption at rest",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/health",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"health"
-					]
-				},
-				"description": "Evidence can be found by calling /internal/db-audit on payment-service."
-			},
-			"response": []
-		},
-		{
-			"name": "88. mTLS communication",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/health",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"health"
-					]
-				},
-				"description": "Simulated. Internal traffic check is enabled."
-			},
-			"response": []
-		},
-		{
-			"name": "89. RBAC enforcement",
+			],
 			"request": {
 				"method": "GET",
 				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{DRIVER_TOKEN}}",
-						"type": "text"
-					}
+					{ "key": "Authorization", "value": "Bearer tempered.jwt.payload", "type": "text" }
 				],
-				"url": {
-					"raw": "http://localhost:8080/admin/stats",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"admin",
-						"stats"
-					]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
 		},
 		{
-			"name": "90. Sensitive data masking",
+			"name": "84. Unauthorized Admin access",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Unauthorized access returns 401 or 403\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] }
+			}
+		},
+		{
+			"name": "89. RBAC enforcement (Driver accessing Admin)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Driver rejected from Admin with 403\", () => {",
+							"    pm.response.to.have.status(403);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "GET",
 				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{USER_TOKEN}}",
-						"type": "text"
-					}
+					{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
 				],
-				"url": {
-					"raw": "http://localhost:8080/payments/{{BOOKING_ID}}",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"payments",
-						"{{BOOKING_ID}}"
-					]
-				}
-			},
-			"response": []
+				"url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] }
+			}
 		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" }
 	]
 }

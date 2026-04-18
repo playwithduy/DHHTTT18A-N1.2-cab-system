@@ -60,6 +60,16 @@
 			"item": [
 				{
 					"name": "11. Booking thiếu pickup -> lỗi 400",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });",
+								"pm.test(\"Error message present\", () => { pm.expect(pm.response.json().message).to.include(\"required\"); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -73,6 +83,15 @@
 				},
 				{
 					"name": "12. Sai format lat/lng → reject",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 422 Unprocessable\", () => { pm.response.to.have.status(422); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -86,6 +105,19 @@
 				},
 				{
 					"name": "13. Driver offline không nhận booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 200 with success false\", () => {",
+								"    var jsonData = pm.response.json();",
+								"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+								"    if (pm.response.code === 200) pm.expect(jsonData.success).to.be.false;",
+								"});"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -99,6 +131,16 @@
 				},
 				{
 					"name": "14. Payment method invalid → reject",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });",
+								"pm.test(\"Error message present\", () => { pm.expect(pm.response.json().message).to.include(\"payment method\"); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -112,6 +154,15 @@
 				},
 				{
 					"name": "15. ETA với distance = 0",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -125,6 +176,15 @@
 				},
 				{
 					"name": "16. Pricing với demand_index = 0",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -138,6 +198,15 @@
 				},
 				{
 					"name": "17. Fraud API với input thiếu field",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -151,6 +220,14 @@
 				},
 				{
 					"name": "18. Token expired -> 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Returns 401 Unauthorized\", () => { pm.response.to.have.status(401); });"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"header": [{ "key": "Authorization", "value": "Bearer expired_token_here" }],
 						"method": "GET",
@@ -159,9 +236,23 @@
 				},
 				{
 					"name": "19. Duplicate booking request (idempotency)",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": [
+								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+								"pm.test(\"Returns 200 or 201\", () => { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+								"var jsonData = pm.response.json();",
+								"pm.test(\"Idempotency Check: Returns existing record\", () => {",
+								"    pm.expect(jsonData.success).to.be.true;",
+								"    pm.expect(jsonData.id || jsonData.data.id).to.be.a('string');",
+								"});"
+							], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
-						"header": [{ "key": "x-idempotency-key", "value": "test-key-123" }],
+						"header": [{ "key": "x-idempotency-key", "value": "test-key-123-{{$randomInt}}" }],
 						"method": "POST",
 						"body": {
 							"mode": "raw",

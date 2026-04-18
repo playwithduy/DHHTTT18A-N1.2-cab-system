@@ -12,9 +12,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Booking successful\", () => { pm.response.to.have.status(201); });",
 							"var jsonData = pm.response.json();",
-							"pm.test(\"Verify ETA > 0\", function () { var eta = jsonData.data && (jsonData.data.eta || jsonData.data.id); pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
-							"pm.collectionVariables.set(\"bookingId\", (jsonData.data && (jsonData.data.id || jsonData.data.booking_id)) || 'test-id');"
+							"pm.collectionVariables.set(\"bookingId\", jsonData.data.id || jsonData.data.booking_id);"
 						],
 						"type": "text/javascript"
 					}
@@ -38,8 +39,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"var jsonData = pm.response.json();",
-							"pm.test(\"Verify Pricing success\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 500]); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Pricing validation success\", () => {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.price).to.be.above(0);",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -58,8 +63,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"var jsonData = pm.response.json();",
-							"pm.test(\"Driver assigned by AI\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 500]); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Driver assigned check\", () => {",
+							"     pm.response.to.have.status(200);",
+							"     var jsonData = pm.response.json();",
+							"     pm.expect(jsonData.data.driverId || jsonData.data.driver_id).to.not.be.null;",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -78,7 +87,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is REQUESTED (Paid & Confirmed)\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 500]); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Full flow status check\", () => {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.status).to.eql(\"REQUESTED\");",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -113,7 +127,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status updated to ACCEPTED\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 500]); });"
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status updated successfully\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Status transitioned to ACCEPTED\", () => {",
+							"    pm.expect(jsonData.data.status).to.eql(\"ACCEPTED\");",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -137,8 +156,11 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
 							"var jsonData = pm.response.json();",
-							"pm.test(\"Check matchingReason for AI Reasoning content\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 500]); });"
+							"pm.test(\"AI Context: reasoning exists\", () => {",
+							"    pm.expect(jsonData.data.matchingReason).to.be.a('string');",
+							"});"
 						],
 						"type": "text/javascript"
 					}

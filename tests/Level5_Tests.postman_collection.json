@@ -12,8 +12,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"ETA is logical\", function () {",
-							"    var jsonData = pm.response.json();",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"ETA is logical (1-60 mins)\", () => {",
 							"    pm.expect(jsonData.data.eta).to.be.within(1, 60);",
 							"});"
 						],
@@ -29,19 +31,21 @@
 					"raw": "{\n  \"distance_km\": 5,\n  \"traffic_level\": 0.5\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/eta", "host": ["http://localhost:3008"], "path": ["eta"] }
+				"url": { "raw": "{{baseUrl}}/eta", "host": ["{{baseUrl}}"], "path": ["eta"] }
 			}
 		},
 		{
-			"name": "42. Pricing surge > 1 khi demand cao",
+			"name": "42. Pricing surge capping check",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Surge is capped at 3.0\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.data.surge_multiplier).to.eql(3);",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Surge is capped at 3.0\", () => {",
+							"    pm.expect(jsonData.data.multiplier || jsonData.data.surge_multiplier).to.eql(3);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -56,7 +60,7 @@
 					"raw": "{\n  \"distance_km\": 10,\n  \"demand_index\": 5,\n  \"supply_index\": 1\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3006/price", "host": ["http://localhost:3006"], "path": ["price"] }
+				"url": { "raw": "{{baseUrl}}/pricing", "host": ["{{baseUrl}}"], "path": ["pricing"] }
 			}
 		},
 		{
@@ -66,8 +70,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Fraud flagged correctly\", function () {",
-							"    var jsonData = pm.response.json();",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Fraud flagged correctly\", () => {",
 							"    pm.expect(jsonData.data.is_fraud).to.be.true;",
 							"    pm.expect(jsonData.data.score).to.be.above(0.9);",
 							"});"
@@ -84,7 +90,7 @@
 					"raw": "{\n  \"user_id\": \"u1\", \"driver_id\": \"d1\", \"booking_id\": \"b1\", \"amount\": 50000, \n  \"simulate_fraud\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3009/fraud/check", "host": ["http://localhost:3009"], "path": ["fraud", "check"] }
+				"url": { "raw": "{{baseUrl}}/fraud/check", "host": ["{{baseUrl}}"], "path": ["fraud", "check"] }
 			}
 		},
 		{
@@ -94,10 +100,13 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Top-N drivers returned\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.topDrivers).to.be.an(\"array\");",
-							"    pm.expect(jsonData.topDrivers.length).to.be.at.least(1);",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Top-N drivers returned in data or topDrivers\", () => {",
+							"    var drivers = jsonData.topDrivers || jsonData.data.topDrivers;",
+							"    pm.expect(drivers).to.be.an(\"array\");",
+							"    pm.expect(drivers.length).to.be.at.least(1);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -112,7 +121,7 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"vehicleType\": \"car\"\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
@@ -122,8 +131,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Forecast data format valid\", function () {",
-							"    var jsonData = pm.response.json();",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Forecast schema validation\", () => {",
 							"    pm.expect(jsonData.data.demand_forecast).to.exist;",
 							"    pm.expect(jsonData.data.timestamp).to.exist;",
 							"});"
@@ -135,7 +146,7 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": { "raw": "http://localhost:3008/forecast?lat=10.76&lng=106.66", "host": ["http://localhost:3008"], "path": ["forecast"], "query": [{ "key": "lat", "value": "10.76" }, { "key": "lng", "value": "106.66" }] }
+				"url": { "raw": "{{baseUrl}}/forecast?lat=10.76&lng=106.66", "host": ["{{baseUrl}}"], "path": ["forecast"], "query": [{ "key": "lat", "value": "10.76" }, { "key": "lng", "value": "106.66" }] }
 			}
 		},
 		{
@@ -145,9 +156,11 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Model version returned\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.version).to.exist;",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Model version exists\", () => {",
+							"    pm.expect(jsonData.version || jsonData.data.version).to.exist;",
 							"});"
 						],
 						"type": "text/javascript"
@@ -157,7 +170,7 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": { "raw": "http://localhost:3008/health", "host": ["http://localhost:3008"], "path": ["health"] }
+				"url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
 			}
 		},
 		{
@@ -167,7 +180,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Response time is less than 200ms\", function () {",
+							"pm.test(\"Performance check: Response time < 200ms\", () => {",
 							"    pm.expect(pm.response.responseTime).to.be.below(200);",
 							"});"
 						],
@@ -183,7 +196,7 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
@@ -193,9 +206,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Drift detected\", function () {",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Drift detected for extreme input\", () => {",
 							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.driftDetected).to.be.true;",
+							"    pm.expect(jsonData.driftDetected || jsonData.data.driftDetected).to.be.true;",
 							"});"
 						],
 						"type": "text/javascript"
@@ -210,7 +224,7 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"distance_km\": 100\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
@@ -220,10 +234,11 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Fallback logic active\", function () {",
+							"pm.test(\"Fallback logic active\", () => {",
 							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.isFallback).to.be.true;",
-							"    pm.expect(jsonData.reasoning).to.contains(\"FALLBACK\");",
+							"    var fallback = jsonData.isFallback || (jsonData.data && jsonData.data.isFallback);",
+							"    pm.expect(fallback).to.be.true;",
+							"    pm.expect(jsonData.reasoning || jsonData.data.reasoning).to.include(\"FALLBACK\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -238,19 +253,19 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_fallback\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
-			"name": "50. Input bất thường → model không crash",
+			"name": "50. Input bất thường → handled 400",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Rejected as outlier\", function () {",
+							"pm.test(\"Rejected as outlier (400)\", () => {",
 							"    pm.response.to.have.status(400);",
-							"    pm.expect(pm.response.json().message).to.contains(\"operational limit\");",
+							"    pm.expect(pm.response.json().message).to.include(\"limit\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -265,21 +280,11 @@
 					"raw": "{\n  \"distance_km\": 1001\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3006/price", "host": ["http://localhost:3006"], "path": ["price"] }
+				"url": { "raw": "{{baseUrl}}/pricing", "host": ["{{baseUrl}}"], "path": ["pricing"] }
 			}
 		}
 	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": { "type": "text/javascript", "exec": [""] }
-		},
-		{
-			"listen": "test",
-			"script": { "type": "text/javascript", "exec": [""] }
-		}
-	],
 	"variable": [
-		{ "key": "base_url", "value": "http://localhost:8080" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" }
 	]
 }

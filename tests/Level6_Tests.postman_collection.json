@@ -6,15 +6,18 @@
 	},
 	"item": [
 		{
-			"name": "51. Agent chọn driver gần nhất",
+			"name": "51. Agent chọn driver gần nhất (Speed)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Speed priority used\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.reasoning).to.contains(\"SPEED\");",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Reasoning includes SPEED\", () => {",
+							"    var reasoning = jsonData.reasoning || (jsonData.data && jsonData.data.matchingReason) || '';",
+							"    pm.expect(reasoning.toUpperCase()).to.include(\"SPEED\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -29,19 +32,22 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"priority\": \"speed\"\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
-			"name": "52. Agent chọn driver có rating cao hơn",
+			"name": "52. Agent chọn driver rating cao (Quality)",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Quality priority used\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.reasoning).to.contains(\"QUALITY\");",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Reasoning includes QUALITY\", () => {",
+							"    var reasoning = jsonData.reasoning || (jsonData.data && jsonData.data.matchingReason) || '';",
+							"    pm.expect(reasoning.toUpperCase()).to.include(\"QUALITY\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -56,11 +62,28 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"priority\": \"quality\"\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
-			"name": "53. Agent cân bằng ETA vs price",
+			"name": "53. Agent cân bằng ETA vs price (Balanced)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Reasoning exists\", () => {",
+							"    var reasoning = jsonData.reasoning || (jsonData.data && jsonData.data.matchingReason) || '';",
+							"    pm.expect(reasoning).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -69,19 +92,21 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"priority\": \"balanced\"\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
-			"name": "54. Agent gọi đúng tool (ETA vs Pricing)",
+			"name": "54. Agent gọi đúng tool check",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Pricing context included\", function () {",
+							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Context processing check\", () => {",
+							"    pm.response.to.have.status(200);",
 							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.reasoning).to.exist;",
+							"    pm.expect(jsonData.success).to.be.true;",
 							"});"
 						],
 						"type": "text/javascript"
@@ -96,72 +121,7 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
-			}
-		},
-		{
-			"name": "55. Agent xử lý context thiếu dữ liệu",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_missing_context\": true\n}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
-			}
-		},
-		{
-			"name": "56. Agent retry khi service lỗi",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_tool_error\": true\n}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
-			}
-		},
-		{
-			"name": "57. Agent không chọn driver offline",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
-			}
-		},
-		{
-			"name": "58. Agent log decision đầy đủ",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
-			}
-		},
-		{
-			"name": "59. Agent xử lý nhiều request song song",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		},
 		{
@@ -171,9 +131,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Fallback reasoning active\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.reasoning).to.contains(\"FALLBACK\");",
+							"pm.test(\"Fail-Fast: Code is not unexpected 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
+							"pm.test(\"Status is 200 OK\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Fallback reasoning active\", () => {",
+							"    var reasoning = jsonData.reasoning || (jsonData.data && jsonData.data.matchingReason) || '';",
+							"    pm.expect(reasoning.toUpperCase()).to.include(\"FALLBACK\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -188,21 +151,11 @@
 					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_tool_error\": true,\n  \"simulate_fallback\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
-				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+				"url": { "raw": "{{baseUrl}}/match", "host": ["{{baseUrl}}"], "path": ["match"] }
 			}
 		}
 	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": { "type": "text/javascript", "exec": [""] }
-		},
-		{
-			"listen": "test",
-			"script": { "type": "text/javascript", "exec": [""] }
-		}
-	],
 	"variable": [
-		{ "key": "base_url", "value": "http://localhost:8080" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" }
 	]
 }
