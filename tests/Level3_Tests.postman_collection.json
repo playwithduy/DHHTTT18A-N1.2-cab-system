@@ -138,6 +138,17 @@
 			"name": "26. Driver nhận notification",
 			"event": [
 				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log('Sleeping for 3 seconds to allow Kafka & Outbox processing...');",
+							"var targetTime = new Date().getTime() + 3000;",
+							"while (new Date().getTime() < targetTime) { ; }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
 					"listen": "test",
 					"script": {
 						"exec": [
