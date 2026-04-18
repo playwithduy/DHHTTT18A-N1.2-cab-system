@@ -6,31 +6,6 @@
 	},
 	"item": [
 		{
-			"name": "0. Setup – Login & set token",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var jsonData = pm.response.json();",
-							"pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\"email\": \"user@test.com\", \"password\": \"123456\"}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
-			}
-		},
-		{
 			"name": "71. Driver service down → fallback check",
 			"event": [
 				{
