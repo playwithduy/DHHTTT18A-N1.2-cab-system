@@ -185,7 +185,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_tool_error\": true\n}",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_tool_error\": true,\n  \"simulate_fallback\": true\n}",
 					"options": { "raw": { "language": "json" } }
 				},
 				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }

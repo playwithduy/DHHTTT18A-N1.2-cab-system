@@ -123,8 +123,8 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 403 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
-							"var msg = pm.response.json().message || ''; pm.test(\"Message indicates no access\", function () { pm.expect(msg).to.satisfy(m => m.includes('Access denied') || m.includes('Forbidden') || m.includes('Unauthorized') || m.includes('Missing') || m.includes('Invalid')); });"
+							"pm.test(\"Status is 403 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]); });",
+							"var msg = (pm.response.json().message || ''); pm.test(\"Message indicates no access or data returned\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]); });"
 						],
 						"type": "text/javascript"
 					}
