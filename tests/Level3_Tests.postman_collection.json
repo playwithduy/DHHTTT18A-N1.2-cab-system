@@ -105,7 +105,6 @@
 			}
 		},
 		{
-		{
 			"name": "25. Kafka event ride_requested được publish",
 			"event": [
 				{
