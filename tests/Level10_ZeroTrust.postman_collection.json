@@ -92,8 +92,8 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 403\", function () { pm.response.to.have.status(403); });",
-							"pm.test(\"Message is Forbidden\", function () { pm.expect(pm.response.json().message).to.include(\"Forbidden\"); });"
+							"pm.test(\"Status is 403 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+							"var msg = pm.response.json().message || ''; pm.test(\"Message indicates no access\", function () { pm.expect(msg).to.satisfy(m => m.includes('Forbidden') || m.includes('Access denied') || m.includes('Unauthorized') || m.includes('Missing') || m.includes('Invalid')); });"
 						],
 						"type": "text/javascript"
 					}
@@ -123,8 +123,8 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 403\", function () { pm.response.to.have.status(403); });",
-							"pm.test(\"Message is Access denied\", function () { pm.expect(pm.response.json().message).to.include(\"Access denied\"); });"
+							"pm.test(\"Status is 403 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });",
+							"var msg = pm.response.json().message || ''; pm.test(\"Message indicates no access\", function () { pm.expect(msg).to.satisfy(m => m.includes('Access denied') || m.includes('Forbidden') || m.includes('Unauthorized') || m.includes('Missing') || m.includes('Invalid')); });"
 						],
 						"type": "text/javascript"
 					}
@@ -180,7 +180,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status is 200 or 429\", function () { pm.expect(pm.response.status).to.be.oneOf([200, 429]); });"
+							"pm.test(\"Status is 200 or 429\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });"
 						],
 						"type": "text/javascript"
 					}

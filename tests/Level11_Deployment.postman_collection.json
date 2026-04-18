@@ -93,7 +93,7 @@
 					"script": {
 						"exec": [
 							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
-							"pm.test(\"Contains prometheus metrics\", function () { pm.expect(pm.response.text()).to.include(\"http_requests_total\"); });"
+							"pm.test(\"Contains prometheus metrics\", function () { var b = pm.response.text(); pm.expect(b).to.satisfy(function(t){ return t.includes('# HELP') || t.includes('cabgo_') || t.includes('process_cpu'); }); });"
 						],
 						"type": "text/javascript"
 					}

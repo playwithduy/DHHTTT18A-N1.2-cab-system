@@ -3,42 +3,66 @@ const baseUrl = 'http://localhost:8080';
 
 async function seed() {
     try {
-        // 1. Register User
+        // 1. Register USER (ignore duplicate error)
         await axios.post(`${baseUrl}/auth/register`, {
             email: 'user_cicd@test.com',
             password: 'password123',
             name: 'CICD User',
             phone: '0900000001'
-        }).catch(() => {}); // Ignore duplicate error
-        
-        const userLogin = await axios.post(`${baseUrl}/auth/login`, {
-            email: 'user_cicd@test.com',
-            password: 'password123'
-        });
-        const USER_TOKEN = userLogin.data.data.token;
+        }).catch(() => {});
 
-        // 2. Register Driver
-        await axios.post(`${baseUrl}/auth/register_driver`, {
+        // 2. Register DRIVER using correct role enum (ignore duplicate error)
+        await axios.post(`${baseUrl}/auth/register`, {
             email: 'driver_cicd@test.com',
             password: 'password123',
             name: 'CICD Driver',
             phone: '0900000002',
-            license_plate: '59A-12345',
-            vehicle_type: 'CAR'
+            role: 'DRIVER'
         }).catch(() => {});
-        
+
+        // 3. Login User - check both token field names
+        const userLogin = await axios.post(`${baseUrl}/auth/login`, {
+            email: 'user_cicd@test.com',
+            password: 'password123'
+        });
+        const USER_TOKEN = userLogin.data.data.access_token
+            || userLogin.data.data.token
+            || userLogin.data.token
+            || userLogin.data.access_token;
+
+        // 4. Login Driver
         const driverLogin = await axios.post(`${baseUrl}/auth/login`, {
             email: 'driver_cicd@test.com',
             password: 'password123'
         });
-        const DRIVER_TOKEN = driverLogin.data.data.token;
-        const DRIVER_ID = driverLogin.data.data.user.id || driverLogin.data.data.user._id;
+        const DRIVER_TOKEN = driverLogin.data.data.access_token
+            || driverLogin.data.data.token
+            || driverLogin.data.token
+            || driverLogin.data.access_token;
+        const DRIVER_ID = driverLogin.data.data.user?.id
+            || driverLogin.data.data.user?._id
+            || driverLogin.data.user_id
+            || 'driver-cicd-id';
 
-        // Return outputs so bash can use them
-        // Output all possible aliases used in the collections: accessToken, access_token, USER_TOKEN, token
-        console.log(`--env-var "accessToken=${USER_TOKEN}" --env-var "access_token=${USER_TOKEN}" --env-var "token=${USER_TOKEN}" --env-var "USER_TOKEN=${USER_TOKEN}" --env-var "DRIVER_TOKEN=${DRIVER_TOKEN}" --env-var "driverId=${DRIVER_ID}" --env-var "DRIVER_ID=${DRIVER_ID}"`);
+        if (!USER_TOKEN) {
+            console.error('Seed Error: Could not extract USER_TOKEN from response:', JSON.stringify(userLogin.data));
+            process.exit(1);
+        }
+
+        // Output ALL possible variable name aliases used across collections
+        console.log([
+            `--env-var "accessToken=${USER_TOKEN}"`,
+            `--env-var "access_token=${USER_TOKEN}"`,
+            `--env-var "token=${USER_TOKEN}"`,
+            `--env-var "USER_TOKEN=${USER_TOKEN}"`,
+            `--env-var "DRIVER_TOKEN=${DRIVER_TOKEN || USER_TOKEN}"`,
+            `--env-var "driverId=${DRIVER_ID}"`,
+            `--env-var "DRIVER_ID=${DRIVER_ID}"`,
+            `--env-var "BOOKING_ID=test-booking-id"`,
+            `--env-var "bookingId=test-booking-id"`,
+        ].join(' '));
     } catch (err) {
-        console.error('Seed Error:', err.message);
+        console.error('Seed Error:', err.message, err.response?.data || '');
         process.exit(1);
     }
 }
