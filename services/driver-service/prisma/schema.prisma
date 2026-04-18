@@ -1,0 +1,24 @@
+// prisma/schema.prisma — Driver Service (MongoDB)
+// Port: 3004
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Driver {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique @map("user_id")
+  vehicleModel  String?  @map("vehicle_model")
+  vehiclePlate  String?  @map("vehicle_plate")
+  status        String   @default("OFFLINE")
+  currentLat    Float?   @map("current_lat")
+  currentLng    Float?   @map("current_lng")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("drivers")
+}

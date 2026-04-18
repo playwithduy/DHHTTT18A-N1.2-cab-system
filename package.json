@@ -1,0 +1,36 @@
+{
+  "name": "cab-booking-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:customer": "yarn workspace @cab/customer-app dev",
+    "dev:driver": "yarn workspace @cab/driver-app dev",
+    "dev:admin": "yarn workspace @cab/admin-dashboard dev",
+    "dev:all": "concurrently \"yarn dev:customer\" \"yarn dev:driver\" \"yarn dev:admin\"",
+    "build:all": "yarn workspaces run build",
+    "lint": "yarn workspaces run lint",
+    "type-check": "yarn workspaces run type-check",
+    "test:lv1": "powershell -ExecutionPolicy Bypass -File tests/curl_level1.ps1",
+    "test:lv1:bash": "bash tests/level1_curl.sh",
+    "test:level1_curl.sh": "bash tests/level1_curl.sh",
+    "test:level1_curl.ps1": "powershell -ExecutionPolicy Bypass -File tests/level1_curl.ps1",
+    "test:level1": "node tests/verify_lv1.js",
+    "test:lv1:js": "node tests/verify_lv1.js",
+    "test:lv2": "powershell -ExecutionPolicy Bypass -File tests/curl_level2.ps1",
+    "test:lv2:bash": "bash tests/curl_level2.sh",
+    "test:lv2:js": "node tests/level2.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@types/leaflet": "^1.9.21",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1"
+  }
+}

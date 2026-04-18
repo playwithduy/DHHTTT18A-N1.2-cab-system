@@ -1,0 +1,6 @@
+{
+  "name": "cab-tests",
+  "dependencies": {
+    "axios": "^1.14.0"
+  }
+}

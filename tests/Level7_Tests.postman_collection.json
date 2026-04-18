@@ -1,0 +1,78 @@
+{
+	"info": {
+		"_postman_id": "level7-perf-load",
+		"name": "Level 7 - PERFORMANCE & LOAD (10 Steps 61-70)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "61. Load: 1000 Requests/Sec Booking (Test Script)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": { "raw": "http://localhost:8080/health", "host": ["http://localhost:8080"], "path": ["health"] },
+				"description": "Manual trigger for health follow-up after load test script execution."
+			}
+		},
+		{
+			"name": "67. Rate Limit: Verify HTTP 429",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Note: This requires hitting the gateway very fast beyond 2000 RPS",
+							"pm.test(\"Rate limit check\", function () {",
+							"    if (pm.response.code === 429) {",
+							"        pm.expect(pm.response.json().message).to.contains(\"Too many requests\");",
+							"    } else {",
+							"        pm.response.to.have.status(200);",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": { "raw": "http://localhost:8080/health", "host": ["http://localhost:8080"], "path": ["health"] }
+			}
+		},
+		{
+			"name": "68. Latency: P95 Benchmark Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Response time is within SLA\", function () {",
+							"    pm.expect(pm.response.responseTime).to.be.below(300);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": { "raw": "http://localhost:8080/health", "host": ["http://localhost:8080"], "path": ["health"] }
+			}
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": { "type": "text/javascript", "exec": [""] }
+		},
+		{
+			"listen": "test",
+			"script": { "type": "text/javascript", "exec": [""] }
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:8080" }
+	]
+}

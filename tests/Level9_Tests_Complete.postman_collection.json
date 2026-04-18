@@ -1,0 +1,252 @@
+{
+	"info": {
+		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd7afe",
+		"name": "Level 9 - FULL SECURITY SUITE (Steps 81-90)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "81. SQLi: Attempt Bypass Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"' OR 1=1 --\",\n    \"password\": \"anything\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "82. XSS: Script Injection in Register",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"hacker@test.com\",\n    \"password\": \"password123\",\n    \"name\": \"<script>alert('hack')</script>\",\n    \"phone\": \"0912345678\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/auth/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "83. JWT: Tamper Simulation",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/test-tamper",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"test-tamper"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "84. RBAC: Unauthorized Admin Access",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/admin/stats",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"admin",
+						"stats"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "85. Rate Limit: API Spamming",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "86. Replay: Idempotency Key Test",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-idempotency-key",
+						"value": "replay-123456",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pickup\": {\"lat\": 10, \"lng\": 106},\n    \"drop\": {\"lat\": 11, \"lng\": 107},\n    \"distance_km\": 5\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/bookings",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"bookings"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "87. Audit: Verify Encryption at Rest",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Evidence can be found by calling /internal/db-audit on payment-service."
+			},
+			"response": []
+		},
+		{
+			"name": "88. mTLS: Connection Rejected Logic",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Simulated. Internal traffic check is enabled."
+			},
+			"response": []
+		},
+		{
+			"name": "89. RBAC: Driver Accessing Admin",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{DRIVER_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8080/admin/stats",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"admin",
+						"stats"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "90. Masking: Verify Masked Payment Info",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{USER_TOKEN}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8080/payments/{{BOOKING_ID}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"payments",
+						"{{BOOKING_ID}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

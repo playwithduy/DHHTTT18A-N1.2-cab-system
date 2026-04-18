@@ -1,0 +1,48 @@
+// prisma/schema.prisma — Booking Service (MongoDB)
+// Port: 3002
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Booking {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @map("user_id")
+  driverId    String?  @map("driver_id")
+  pickupLat   Float    @map("pickup_lat")
+  pickupLng   Float    @map("pickup_lng")
+  dropLat     Float    @map("drop_lat")
+  dropLng     Float    @map("drop_lng")
+  distanceKm  Float    @map("distance_km")
+  price       Int
+  pickupAddress   String?  @map("pickup_address")
+  dropoffAddress  String?  @map("dropoff_address")
+  driverEta       Int?     @map("driver_eta")
+  paidAt          DateTime? @map("paid_at")
+  cancelledAt     DateTime? @map("cancelled_at")
+  status          String   @default("REQUESTED")
+  idempotencyKey  String?  @unique @map("idempotency_key")
+  version         Int      @default(0)
+  failureReason   String?  @map("failure_reason")
+  matchingReason  String?  @map("matching_reason")
+  vehicleType     String   @default("car") @map("vehicle_type")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("bookings")
+}
+
+model Outbox {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  topic     String
+  payload   String   // JSON string
+  status    String   @default("PENDING") // PENDING, PROCESSED, FAILED
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("outbox")
+}

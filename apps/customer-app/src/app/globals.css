@@ -1,0 +1,150 @@
+/* Fonts handled by Next.js font optimization - charset: utf-8 */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-plus-jakarta: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --map-height: calc(100vh - 0px);
+  --bottom-sheet-radius: 1.5rem;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-inter);
+  background: #ffffff;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  font-family: var(--font-inter) !important;
+  background: #f8fafc !important;
+  height: 100% !important;
+  width: 100% !important;
+  z-index: 1;
+}
+
+.leaflet-control-container .leaflet-routing-container { opacity: 0; display: none; }
+.leaflet-bar { border: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; }
+.leaflet-bar a { background-color: #fff !important; color: #00b2a9 !important; border-bottom: 1px solid #f1f5f9 !important; }
+
+/* Custom Popup Styling */
+.custom-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+.custom-popup .leaflet-popup-content {
+  margin: 8px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1e293b;
+}
+.custom-popup .leaflet-popup-tip-container { display: none; }
+
+/* Bottom Sheet */
+/* Phone Mockup Frame for non-pc experience */
+@media (min-width: 640px) {
+  .phone-frame {
+    width: 380px;
+    height: 720px;
+    border-radius: 56px;
+    background: #0f172a;
+    padding: 12px;
+    position: relative;
+    box-shadow: 
+      0 0 0 2px #334155,
+      0 20px 50px -10px rgba(0,0,0,0.5),
+      0 10px 20px -5px rgba(0,0,0,0.3),
+      inset 0 0 15px rgba(255,255,255,0.1);
+    transform: perspective(1000px) rotateX(2deg);
+    margin: 40px auto;
+    z-index: 10;
+  }
+
+  /* Hardware Buttons Simulation */
+  .phone-frame::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: 100px;
+    width: 4px;
+    height: 60px;
+    background: #334155;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  }
+
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 28px;
+    background: #0f172a;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+    z-index: 101;
+  }
+
+  .phone-content {
+    width: 356px; /* 380px frame - 24px total padding */
+    height: 696px; /* 720px frame - 24px total padding */
+    border-radius: 42px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  .phone-content.driver-theme {
+    background-color: #0f172a !important;
+  }
+}
+
+.phone-content::-webkit-scrollbar {
+  display: none;
+}
+
+.bottom-sheet-shadow {
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s infinite ease-in-out;
+}
+
+/* Hide Mapbox references if any */
+.mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib { display: none !important; }
+
+@layer utilities {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-top    { padding-top:    env(safe-area-inset-top,    0px); }
+  .glass {
+    backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+}

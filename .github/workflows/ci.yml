@@ -1,0 +1,55 @@
+name: CabGo Continuous Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Newman & Newman HTML Extra
+      run: |
+        npm install -g newman newman-reporter-htmlextra
+
+    - name: Spin up Infrastructure & Microservices
+      run: |
+        # Use docker-compose.yml to build and start everything in the background
+        docker compose up -d --build
+        
+    - name: Wait for Services to Warm Up
+      run: |
+        echo "Waiting for 30 seconds to let Postgres, Kafka and Node services initialize..."
+        sleep 30
+        
+        # Verify Gateway is reachable
+        curl -f http://localhost:8080/health || (echo "Gateway not ready" && exit 1)
+        
+        # Verify Core Services
+        curl -f http://localhost:3002/health || (echo "Booking Service not ready" && exit 1)
+        curl -f http://localhost:3005/health || (echo "Payment Service not ready" && exit 1)
+
+    - name: Ensure Test Script is Executable
+      run: chmod +x tests/run-ci-tests.sh
+
+    - name: Run 120+ Postman Tests (Mathematical Proof)
+      run: ./tests/run-ci-tests.sh
+
+    - name: Upload Test Coverage Reports 
+      if: always() # Upload artifacts even if the tests fail, so we can debug!
+      uses: actions/upload-artifact@v4
+      with:
+        name: newman-html-reports
+        path: tests/reports/
+        retention-days: 7

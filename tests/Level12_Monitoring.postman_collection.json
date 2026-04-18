@@ -1,0 +1,99 @@
+{
+	"info": {
+		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1112",
+		"name": "Level 12 - MONITORING & OBSERVABILITY (Steps 111-120)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "111. Tracing: Verify X-Trace-ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+							"pm.test(\"X-Trace-ID header exists\", function () { pm.expect(pm.response.headers.get('X-Trace-ID')).to.be.ok; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/health",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8080",
+					"path": ["health"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "113. Metrics: Prometheus Endpoint",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+							"pm.test(\"Metrics format is correct\", function () { pm.expect(pm.response.text()).to.include(\"cabgo_\"); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/metrics",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8080",
+					"path": ["metrics"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "118. AI Monitoring: Match Ride with Metadata",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+							"pm.test(\"Contains modelVersion\", function () { pm.expect(pm.response.json().modelVersion).to.be.ok; });",
+							"pm.test(\"Contains latencyMs\", function () { pm.expect(pm.response.json().latencyMs).to.be.a('number'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"pickup\":{\"lat\":10,\"lng\":106},\"distance_km\":5}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": {
+					"raw": "http://localhost:3008/match",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "3008",
+					"path": ["match"]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" }
+	]
+}

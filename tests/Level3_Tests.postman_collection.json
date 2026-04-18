@@ -1,0 +1,191 @@
+{
+	"info": {
+		"_postman_id": "step-by-step-level-3-id",
+		"name": "CabGo - Level 3 (10 Steps 21-30)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "21. Booking -> gọi ETA service thành công",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Verify ETA > 0\", function () { pm.expect(jsonData.data.eta).to.be.at.least(0); });",
+							"pm.collectionVariables.set(\"bookingId\", jsonData.data.id || jsonData.data.booking_id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		},
+		{
+			"name": "22. Booking -> gọi Pricing service",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Verify Pricing success\", function () { pm.expect(jsonData.data.price).to.be.above(0); pm.expect(jsonData.data.surge_multiplier || jsonData.data.surge).to.be.at.least(1); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+			}
+		},
+		{
+			"name": "23. AI Agent chọn driver từ Driver Service",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Driver assigned by AI\", function () { pm.expect(jsonData.data.driverId).to.not.be.null; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+			}
+		},
+		{
+			"name": "24. Booking -> Payment -> Notification flow",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status is REQUESTED (Paid & Confirmed)\", function () { pm.expect(pm.response.json().data.status).to.eql(\"REQUESTED\"); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+			}
+		},
+		{
+			"name": "25. Kafka event ride_requested được publish",
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/health", "description": "Check console logs for 'ride_requested published'", "host": ["{{baseUrl}}"], "path": ["health"] }
+			}
+		},
+		{
+			"name": "26. Driver nhận notification",
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/health", "description": "Check notification-service logs", "host": ["{{baseUrl}}"], "path": ["health"] }
+			}
+		},
+		{
+			"name": "27. Booking update trạng thái ACCEPTED",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status updated to ACCEPTED\", function () { pm.expect(pm.response.json().data.status).to.eql(\"ACCEPTED\"); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "PATCH",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"status\": \"ACCEPTED\",\n    \"driverId\": \"DRV_TEST_789\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}/status", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}", "status"] }
+			}
+		},
+		{
+			"name": "28. MCP context được fetch thành công",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Check matchingReason for AI Reasoning content\", function () { pm.expect(jsonData.data.matchingReason).to.not.be.null; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+			}
+		},
+		{
+			"name": "29. API Gateway route đúng service",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Gateway healthy\", function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "GET",
+				"url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+			}
+		},
+		{
+			"name": "30. Retry khi Pricing service timeout",
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5,\n    \"simulate_pricing_timeout\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+			}
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" },
+		{ "key": "bookingId", "value": "" }
+	]
+}

@@ -1,0 +1,208 @@
+{
+	"info": {
+		"_postman_id": "level6-agent-logic",
+		"name": "Level 6 - AI AGENT LOGIC (10 Steps 51-60)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "51. Agent: Speed Priority (Closest)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Speed priority used\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.reasoning).to.contains(\"SPEED\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"priority\": \"speed\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "52. Agent: Quality Priority (Rating)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Quality priority used\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.reasoning).to.contains(\"QUALITY\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"priority\": \"quality\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "53. Agent: Balanced Strategy",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"priority\": \"balanced\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "54. Agent: Tool Call (Pricing)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Pricing context included\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.reasoning).to.exist;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "55. Agent: Missing Context Resilience",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_missing_context\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "56. Agent: Tool Retry Simulation",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_tool_error\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "57. Agent: Offline Driver Filter",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "58. Agent: Detailed Decision Logs",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "59. Agent: Parallel Request Performance",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "60. Agent: Fallback Rule-Based",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fallback reasoning active\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.reasoning).to.contains(\"FALLBACK\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_tool_error\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": { "type": "text/javascript", "exec": [""] }
+		},
+		{
+			"listen": "test",
+			"script": { "type": "text/javascript", "exec": [""] }
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:8080" }
+	]
+}

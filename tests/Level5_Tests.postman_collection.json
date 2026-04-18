@@ -1,0 +1,285 @@
+{
+	"info": {
+		"_postman_id": "level5-ai-validation",
+		"name": "Level 5 - AI SERVICE (10 Steps 41-50)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "41. ETA: Model Output Logical Range",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"ETA is logical\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.eta).to.be.within(1, 60);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"distance_km\": 5,\n  \"traffic_level\": 0.5\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/eta", "host": ["http://localhost:3008"], "path": ["eta"] }
+			}
+		},
+		{
+			"name": "42. Pricing: Surge Capping (demand=5)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Surge is capped at 3.0\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.surge_multiplier).to.eql(3);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"distance_km\": 10,\n  \"demand_index\": 5,\n  \"supply_index\": 1\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3006/price", "host": ["http://localhost:3006"], "path": ["price"] }
+			}
+		},
+		{
+			"name": "43. Fraud: Score and Flag Validation",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fraud flagged correctly\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.is_fraud).to.be.true;",
+							"    pm.expect(jsonData.data.score).to.be.above(0.9);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"user_id\": \"u1\", \"driver_id\": \"d1\", \"booking_id\": \"b1\", \"amount\": 50000, \n  \"simulate_fraud\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3009/fraud/check", "host": ["http://localhost:3009"], "path": ["fraud", "check"] }
+			}
+		},
+		{
+			"name": "44. Match: Top-N Recommendation Return",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Top-N drivers returned\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.topDrivers).to.be.an(\"array\");",
+							"    pm.expect(jsonData.topDrivers.length).to.be.at.least(1);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"vehicleType\": \"car\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "45. Forecast: Demand History API",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Forecast data format valid\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.demand_forecast).to.exist;",
+							"    pm.expect(jsonData.data.timestamp).to.exist;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": { "raw": "http://localhost:3008/forecast?lat=10.76&lng=106.66", "host": ["http://localhost:3008"], "path": ["forecast"], "query": [{ "key": "lat", "value": "10.76" }, { "key": "lng", "value": "106.66" }] }
+			}
+		},
+		{
+			"name": "46. Audit: Model Versioning Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Model version returned\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.version).to.exist;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": { "raw": "http://localhost:3008/health", "host": ["http://localhost:3008"], "path": ["health"] }
+			}
+		},
+		{
+			"name": "47. Perf: AI Latency < 200ms",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Response time is less than 200ms\", function () {",
+							"    pm.expect(pm.response.responseTime).to.be.below(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "48. Drift: Detection Trigger (dist=100km)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Drift detected\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.driftDetected).to.be.true;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"distance_km\": 100\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "49. Fallback: Model Crash Fallback Logic",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fallback logic active\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.isFallback).to.be.true;",
+							"    pm.expect(jsonData.reasoning).to.contains(\"FALLBACK\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n  \"simulate_fallback\": true\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3008/match", "host": ["http://localhost:3008"], "path": ["match"] }
+			}
+		},
+		{
+			"name": "50. Outlier: Distance = 1000km Rejection",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Rejected as outlier\", function () {",
+							"    pm.response.to.have.status(400);",
+							"    pm.expect(pm.response.json().message).to.contains(\"operational limit\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"distance_km\": 1001\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "http://localhost:3006/price", "host": ["http://localhost:3006"], "path": ["price"] }
+			}
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": { "type": "text/javascript", "exec": [""] }
+		},
+		{
+			"listen": "test",
+			"script": { "type": "text/javascript", "exec": [""] }
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:8080" }
+	]
+}

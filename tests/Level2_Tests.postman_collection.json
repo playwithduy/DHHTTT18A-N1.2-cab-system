@@ -1,0 +1,194 @@
+{
+	"info": {
+		"_postman_id": "c1a2b3c4-d5e6-4f7g-8h9i-j0k1l2m3n4o5",
+		"name": "CabGo - Level 2 (Full Suite 1-20)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "LEVEL 1 - BẢN TIN CƠ BẢN",
+			"item": [
+				{
+					"name": "1. Đăng ký user thành công",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@test.com\",\n    \"password\": \"123456\",\n    \"name\": \"Test User\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+					}
+				},
+				{
+					"name": "2. Đăng nhập trả JWT hợp lệ",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": ["var jsonData = pm.response.json(); pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);"], "type": "text/javascript" }
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@test.com\",\n    \"password\": \"123456\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+					}
+				},
+				{
+					"name": "3. Tạo booking với input hợp lệ",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "LEVEL 2 - VALIDATION & EDGE CASES",
+			"item": [
+				{
+					"name": "11. Booking thiếu pickup -> lỗi 400",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				},
+				{
+					"name": "12. Sai format lat/lng -> reject 422",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pickup\": {\"lat\": \"abc\", \"lng\": 106.66},\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				},
+				{
+					"name": "13. Driver offline không nhận booking",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pickup\": {\"lat\": 0, \"lng\": 0},\n    \"drop\": {\"lat\": 1, \"lng\": 1},\n    \"distance_km\": 100\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				},
+				{
+					"name": "14. Payment method invalid -> reject 400",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5,\n    \"payment_method\": \"invalid_card\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				},
+				{
+					"name": "15. ETA với distance = 0",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"distance_km\": 0\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/eta", "host": ["{{baseUrl}}"], "path": ["eta"] }
+					}
+				},
+				{
+					"name": "16. Pricing với demand_index = 0",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"distance_km\": 5,\n    \"demand_index\": 0,\n    \"supply_index\": 1\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/pricing", "host": ["{{baseUrl}}"], "path": ["pricing"] }
+					}
+				},
+				{
+					"name": "17. Fraud API với input thiếu field -> 400",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"USR123\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/fraud/check", "host": ["{{baseUrl}}"], "path": ["fraud", "check"] }
+					}
+				},
+				{
+					"name": "18. Token expired -> 401",
+					"request": {
+						"header": [{ "key": "Authorization", "value": "Bearer expired_token_here" }],
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				},
+				{
+					"name": "19. Duplicate booking (Idempotency)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"header": [{ "key": "x-idempotency-key", "value": "test-key-123" }],
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pickup\": {\"lat\": 10.76, \"lng\": 106.66},\n    \"drop\": {\"lat\": 10.77, \"lng\": 106.70},\n    \"distance_km\": 5\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				},
+				{
+					"name": "20. Input quá lớn (Payload size test) -> 413",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"data\": \"huge_string_here...\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" }
+	]
+}

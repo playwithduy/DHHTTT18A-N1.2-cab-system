@@ -1,0 +1,24 @@
+{
+  "name": "@cab/ai-matching-service",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.15.0",
+    "axios-retry": "^4.5.0",
+    "express": "^4.19.2",
+    "kafkajs": "^2.2.4",
+    "redis": "^4.6.13"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.7",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}
