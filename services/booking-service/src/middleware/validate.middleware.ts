@@ -12,7 +12,7 @@ export const createBookingSchema = z.object({
     lng: z.number().min(-180).max(180),
   }),
   distance_km: z.number().min(0, "Distance cannot be negative"),
-  payment_method: z.enum(['CASH', 'CARD', 'WALLET']).default('CASH'), // Case 14
+  payment_method: z.string().optional().default('CASH'), // Case 14
 });
 
 // Middleware factory
