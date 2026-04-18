@@ -114,7 +114,7 @@ app.post('/api/test-tamper', (req, res) => {
   res.status(401).json({ success: false, message: 'Invalid token signature (Tamper detected)' });
 });
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'api-gateway', timestamp: new Date().toISOString() }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'api-gateway', version: 'v1.0.0', timestamp: new Date().toISOString() }));
 app.get('/metrics', getMetrics);
 
 // Proxy Auth (Public)
