@@ -205,7 +205,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Expected 429 Too Many Requests\", () => { pm.response.to.have.status(429); });",
+							"pm.test(\"Expected 409 Conflict\", () => { pm.response.to.have.status(409); });",
 							"pm.test(\"Error message is clear\", () => {",
 							"    pm.expect(pm.response.json().message).to.include(\"in progress\");",
 							"});"
