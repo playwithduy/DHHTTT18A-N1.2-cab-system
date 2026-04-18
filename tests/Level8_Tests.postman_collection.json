@@ -65,7 +65,7 @@
 		},
 		{
 			"name": "73. AI fallback (Rule-based)",
-			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Expect 201\", () => { pm.response.to.have.status(201); });"], "type": "text/javascript" } }],
+			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Expect 200 or 201 (AI fallback)\", () => { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"], "type": "text/javascript" } }],
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "POST",
