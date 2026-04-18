@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "c1a2b3c4-d5e6-4f7g-8h9i-j0k1l2m3n4o5",
-		"name": "CabGo - Level 2 (Full Suite 1-20)",
+		"name": "LEVEL 2 – VALIDATION & EDGE CASES",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -72,7 +72,7 @@
 					}
 				},
 				{
-					"name": "12. Sai format lat/lng -> reject 422",
+					"name": "12. Sai format lat/lng → reject",
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -98,7 +98,7 @@
 					}
 				},
 				{
-					"name": "14. Payment method invalid -> reject 400",
+					"name": "14. Payment method invalid → reject",
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -137,7 +137,7 @@
 					}
 				},
 				{
-					"name": "17. Fraud API với input thiếu field -> 400",
+					"name": "17. Fraud API với input thiếu field",
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -158,7 +158,7 @@
 					}
 				},
 				{
-					"name": "19. Duplicate booking (Idempotency)",
+					"name": "19. Duplicate booking request (idempotency)",
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"header": [{ "key": "x-idempotency-key", "value": "test-key-123" }],
@@ -172,7 +172,7 @@
 					}
 				},
 				{
-					"name": "20. Input quá lớn (Payload size test) -> 413",
+					"name": "20. Input quá lớn (payload size test)",
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",

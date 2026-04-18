@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1112",
-		"name": "Level 12 - MONITORING & OBSERVABILITY (Steps 111-120)",
+		"name": "LEVEL 12: MONITORING TESTCASES - Giám sát hệ thống (Observability / Monitoring Testing)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "111. Tracing: Verify X-Trace-ID",
+			"name": "111. Logging đầy đủ request",
 			"event": [
 				{
 					"listen": "test",
@@ -33,7 +33,7 @@
 			"response": []
 		},
 		{
-			"name": "113. Metrics: Prometheus Endpoint",
+			"name": "113. Metrics được expose",
 			"event": [
 				{
 					"listen": "test",
@@ -60,7 +60,7 @@
 			"response": []
 		},
 		{
-			"name": "118. AI Monitoring: Match Ride with Metadata",
+			"name": "118. AI service monitoring",
 			"event": [
 				{
 					"listen": "test",

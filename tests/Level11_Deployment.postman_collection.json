@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1111",
-		"name": "Level 11 - DEPLOYMENT (Steps 101-110)",
+		"name": "LEVEL 11 - DEPLOYMENT",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "101. Health: Booking Service",
+			"name": "101. Deploy service thành công (basic)",
 			"event": [
 				{
 					"listen": "test",
@@ -33,7 +33,7 @@
 			"response": []
 		},
 		{
-			"name": "102. Health: API Gateway",
+			"name": "102. Health check endpoint",
 			"event": [
 				{
 					"listen": "test",
@@ -59,7 +59,7 @@
 			"response": []
 		},
 		{
-			"name": "109. Fail-Fast: Booking Start (Mock)",
+			"name": "109. Config sai → fail fast",
 			"event": [
 				{
 					"listen": "test",

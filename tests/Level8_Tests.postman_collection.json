@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "level8-full-resilience",
-		"name": "Level 8 - FAILURE & RESILIENCE (10 Steps 71-80)",
+		"name": "LEVEL 8 – FAILURE & RESILIENCE",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "71. Failure: Driver Service Down Fallback",
+			"name": "71. Driver service down → fallback",
 			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Handled via fallback\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
 			"request": {
 				"method": "POST",
@@ -16,7 +16,7 @@
 			}
 		},
 		{
-			"name": "72. Resilience: Pricing Timeout Retry",
+			"name": "72. Pricing service timeout → retry",
 			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Handled via retry/fallback\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
 			"request": {
 				"method": "POST",
@@ -26,7 +26,7 @@
 			}
 		},
 		{
-			"name": "73. Reliability: Kafka Down (Outbox Buffer)",
+			"name": "73. Kafka down → buffer event",
 			"request": {
 				"method": "POST",
 				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
@@ -35,7 +35,7 @@
 			}
 		},
 		{
-			"name": "74. Resilience: DB Cache / Replica Failover",
+			"name": "74. DB failover",
 			"request": {
 				"method": "GET",
 				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
@@ -43,7 +43,7 @@
 			}
 		},
 		{
-			"name": "75. Circuit Breaker: OPEN State Verification",
+			"name": "75. Circuit breaker open",
 			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Circuit Breaker handles repetitive failures\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
 			"request": {
 				"method": "POST",
@@ -53,7 +53,7 @@
 			}
 		},
 		{
-			"name": "76. Saga: Partial System Failure Handling",
+			"name": "76. Partial system failure handling",
 			"request": {
 				"method": "POST",
 				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
@@ -62,7 +62,7 @@
 			}
 		},
 		{
-			"name": "77. Retry: Exponential Backoff Check",
+			"name": "77. Retry exponential backoff",
 			"request": {
 				"method": "POST",
 				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
@@ -71,7 +71,7 @@
 			}
 		},
 		{
-			"name": "78. Routing: Service Mesh / Proxy Error",
+			"name": "78. Service mesh routing fail",
 			"request": {
 				"method": "GET",
 				"header": [],
@@ -79,7 +79,7 @@
 			}
 		},
 		{
-			"name": "79. Stability: Network Partition Simulation",
+			"name": "79. Network partition test",
 			"request": {
 				"method": "POST",
 				"header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }],
@@ -88,7 +88,7 @@
 			}
 		},
 		{
-			"name": "80. Degradation: System Under Stress (Skip Logic)",
+			"name": "80. Graceful degradation",
 			"event": [{ "listen": "test", "script": { "exec": ["pm.test(\"System still performs core functions\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 503]); });"], "type": "text/javascript" } }],
 			"request": {
 				"method": "POST",

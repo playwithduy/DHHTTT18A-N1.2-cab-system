@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "level5-ai-validation",
-		"name": "Level 5 - AI SERVICE (10 Steps 41-50)",
+		"name": "LEVEL 5 – AI SERVICE VALIDATION",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "41. ETA: Model Output Logical Range",
+			"name": "41. ETA model output trong range hợp lý",
 			"event": [
 				{
 					"listen": "test",
@@ -33,7 +33,7 @@
 			}
 		},
 		{
-			"name": "42. Pricing: Surge Capping (demand=5)",
+			"name": "42. Pricing surge > 1 khi demand cao",
 			"event": [
 				{
 					"listen": "test",
@@ -60,7 +60,7 @@
 			}
 		},
 		{
-			"name": "43. Fraud: Score and Flag Validation",
+			"name": "43. Fraud score > threshold → flagged",
 			"event": [
 				{
 					"listen": "test",
@@ -88,7 +88,7 @@
 			}
 		},
 		{
-			"name": "44. Match: Top-N Recommendation Return",
+			"name": "44. Recommendation trả top-3 drivers",
 			"event": [
 				{
 					"listen": "test",
@@ -116,7 +116,7 @@
 			}
 		},
 		{
-			"name": "45. Forecast: Demand History API",
+			"name": "45. Forecast trả dữ liệu đúng format",
 			"event": [
 				{
 					"listen": "test",
@@ -139,7 +139,7 @@
 			}
 		},
 		{
-			"name": "46. Audit: Model Versioning Check",
+			"name": "46. Model version được trả về đúng",
 			"event": [
 				{
 					"listen": "test",
@@ -161,7 +161,7 @@
 			}
 		},
 		{
-			"name": "47. Perf: AI Latency < 200ms",
+			"name": "47. AI latency < 200ms",
 			"event": [
 				{
 					"listen": "test",
@@ -187,7 +187,7 @@
 			}
 		},
 		{
-			"name": "48. Drift: Detection Trigger (dist=100km)",
+			"name": "48. Drift detection trigger",
 			"event": [
 				{
 					"listen": "test",
@@ -214,7 +214,7 @@
 			}
 		},
 		{
-			"name": "49. Fallback: Model Crash Fallback Logic",
+			"name": "49. Model fallback khi lỗi",
 			"event": [
 				{
 					"listen": "test",
@@ -242,7 +242,7 @@
 			}
 		},
 		{
-			"name": "50. Outlier: Distance = 1000km Rejection",
+			"name": "50. Input bất thường → model không crash",
 			"event": [
 				{
 					"listen": "test",

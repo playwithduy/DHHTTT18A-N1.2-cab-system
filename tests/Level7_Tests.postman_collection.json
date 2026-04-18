@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "level7-perf-load",
-		"name": "Level 7 - PERFORMANCE & LOAD (10 Steps 61-70)",
+		"name": "LEVEL 7 – PERFORMANCE & LOAD TEST",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "61. Load: 1000 Requests/Sec Booking (Test Script)",
+			"name": "61. 1000 requests/second booking",
 			"request": {
 				"method": "GET",
 				"header": [],
@@ -15,7 +15,7 @@
 			}
 		},
 		{
-			"name": "67. Rate Limit: Verify HTTP 429",
+			"name": "67. API Gateway rate limit",
 			"event": [
 				{
 					"listen": "test",
@@ -41,7 +41,7 @@
 			}
 		},
 		{
-			"name": "68. Latency: P95 Benchmark Check",
+			"name": "68. P95 latency < 300ms",
 			"event": [
 				{
 					"listen": "test",

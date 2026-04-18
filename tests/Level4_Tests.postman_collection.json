@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "level4-sequential-verification",
-		"name": "Level 4 - TRANSACTION (10 Steps 31-40)",
+		"name": "LEVEL 4 - TRANSACTION",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "31. Transaction: Create Booking Success",
+			"name": "31. Transaction tạo booking thành công",
 			"event": [
 				{
 					"listen": "test",
@@ -42,7 +42,7 @@
 			}
 		},
 		{
-			"name": "32. Rollback: Simulate Error after Insert",
+			"name": "32. Rollback khi lỗi giữa chừng",
 			"event": [
 				{
 					"listen": "test",
@@ -75,7 +75,7 @@
 			}
 		},
 		{
-			"name": "33. Compensation: Payment Failed -> Rollback Booking",
+			"name": "33. Payment thất bại → rollback booking",
 			"event": [
 				{
 					"listen": "test",
@@ -107,7 +107,7 @@
 			}
 		},
 		{
-			"name": "34. Idempotency: Duplicate Request Check",
+			"name": "34. Idempotent transaction (duplicate request)",
 			"event": [
 				{
 					"listen": "test",
@@ -141,7 +141,7 @@
 			}
 		},
 		{
-			"name": "35. Concurrency: Race Condition (One should be 429)",
+			"name": "35. Concurrent booking (race condition)",
 			"event": [
 				{
 					"listen": "test",
@@ -170,7 +170,7 @@
 			}
 		},
 		{
-			"name": "36. Saga: Success Flow Verification",
+			"name": "36. Saga transaction – success flow",
 			"event": [
 				{
 					"listen": "test",
@@ -191,7 +191,7 @@
 			}
 		},
 		{
-			"name": "37. Saga: Failure + Compensation Test",
+			"name": "37. Saga transaction – failure + compensation",
 			"event": [
 				{
 					"listen": "test",
@@ -223,7 +223,7 @@
 			}
 		},
 		{
-			"name": "38. Kafka: Outbox Logic (Check processed log)",
+			"name": "38. Kafka event consistency (outbox pattern)",
 			"event": [
 				{
 					"listen": "test",
@@ -255,7 +255,7 @@
 			}
 		},
 		{
-			"name": "39. Resiliency: Payment Timeout (Retry Flow)",
+			"name": "39. Partial failure (network issue)",
 			"event": [
 				{
 					"listen": "test",
@@ -288,7 +288,7 @@
 			}
 		},
 		{
-			"name": "40. ACID: Atomicity Check (Validate null states)",
+			"name": "40. Data integrity (ACID)",
 			"event": [
 				{
 					"listen": "test",

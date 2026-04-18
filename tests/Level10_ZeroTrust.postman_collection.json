@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "c169570d5-0316-4cbb-89ec-aca2cbcd1091",
-		"name": "Level 10 - ZERO TRUST SECURITY (Steps 91-100)",
+		"name": "LEVEL 10 - ZERO TRUST SECURITY",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "91. Unauthorized: Missing Token",
+			"name": "91. Request không có token",
 			"event": [
 				{
 					"listen": "test",
@@ -31,7 +31,7 @@
 			"response": []
 		},
 		{
-			"name": "92. Unauthorized: Tampered Token",
+			"name": "92. Token không hợp lệ (tampered)",
 			"event": [
 				{
 					"listen": "test",
@@ -56,7 +56,7 @@
 			"response": []
 		},
 		{
-			"name": "93. Unauthorized: Expired Token",
+			"name": "93. Token hết hạn",
 			"event": [
 				{
 					"listen": "test",
@@ -86,7 +86,7 @@
 			"response": []
 		},
 		{
-			"name": "95. RBAC: User Forbidden Admin",
+			"name": "95. RBAC – user không có quyền",
 			"event": [
 				{
 					"listen": "test",
@@ -117,7 +117,7 @@
 			"response": []
 		},
 		{
-			"name": "96. Least Privilege: Ownership Bypass",
+			"name": "96. Least privilege (driver không truy cập user data)",
 			"event": [
 				{
 					"listen": "test",
@@ -148,7 +148,7 @@
 			"response": []
 		},
 		{
-			"name": "97. Isolation: Direct Bypass Rejection",
+			"name": "97. API Gateway kiểm tra tất cả request",
 			"event": [
 				{
 					"listen": "test",
@@ -174,7 +174,7 @@
 			"response": []
 		},
 		{
-			"name": "98. Rate Limit: Protection Activation",
+			"name": "98. Rate limiting chống abuse",
 			"event": [
 				{
 					"listen": "test",
@@ -198,7 +198,7 @@
 			"response": []
 		},
 		{
-			"name": "100. Audit: Security Trace Log",
+			"name": "100. Audit logging (security trace)",
 			"event": [
 				{
 					"listen": "test",

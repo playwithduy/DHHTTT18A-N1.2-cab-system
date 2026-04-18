@@ -1,12 +1,12 @@
 {
 	"info": {
 		"_postman_id": "level6-agent-logic",
-		"name": "Level 6 - AI AGENT LOGIC (10 Steps 51-60)",
+		"name": "LEVEL 6 – AI AGENT LOGIC",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "51. Agent: Speed Priority (Closest)",
+			"name": "51. Agent chọn driver gần nhất",
 			"event": [
 				{
 					"listen": "test",
@@ -33,7 +33,7 @@
 			}
 		},
 		{
-			"name": "52. Agent: Quality Priority (Rating)",
+			"name": "52. Agent chọn driver có rating cao hơn",
 			"event": [
 				{
 					"listen": "test",
@@ -60,7 +60,7 @@
 			}
 		},
 		{
-			"name": "53. Agent: Balanced Strategy",
+			"name": "53. Agent cân bằng ETA vs price",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -73,7 +73,7 @@
 			}
 		},
 		{
-			"name": "54. Agent: Tool Call (Pricing)",
+			"name": "54. Agent gọi đúng tool (ETA vs Pricing)",
 			"event": [
 				{
 					"listen": "test",
@@ -100,7 +100,7 @@
 			}
 		},
 		{
-			"name": "55. Agent: Missing Context Resilience",
+			"name": "55. Agent xử lý context thiếu dữ liệu",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -113,7 +113,7 @@
 			}
 		},
 		{
-			"name": "56. Agent: Tool Retry Simulation",
+			"name": "56. Agent retry khi service lỗi",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -126,7 +126,7 @@
 			}
 		},
 		{
-			"name": "57. Agent: Offline Driver Filter",
+			"name": "57. Agent không chọn driver offline",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -139,7 +139,7 @@
 			}
 		},
 		{
-			"name": "58. Agent: Detailed Decision Logs",
+			"name": "58. Agent log decision đầy đủ",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -152,7 +152,7 @@
 			}
 		},
 		{
-			"name": "59. Agent: Parallel Request Performance",
+			"name": "59. Agent xử lý nhiều request song song",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -165,7 +165,7 @@
 			}
 		},
 		{
-			"name": "60. Agent: Fallback Rule-Based",
+			"name": "60. Agent fallback rule-based khi AI fail",
 			"event": [
 				{
 					"listen": "test",
