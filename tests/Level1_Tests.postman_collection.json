@@ -9,6 +9,16 @@
 			"name": "1. Đăng ký user thành công",
 			"event": [
 				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var randomInt = pm.variables.replaceIn('{{$randomInt}}');",
+							"pm.collectionVariables.set(\"testEmail\", \"user\" + randomInt + \"@test.com\");"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
 					"listen": "test",
 					"script": {
 						"exec": [
@@ -34,7 +44,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"user{{$randomInt}}@test.com\",\n    \"password\": \"123456\",\n    \"name\": \"Test User\"\n}",
+					"raw": "{\n    \"email\": \"{{testEmail}}\",\n    \"password\": \"123456\",\n    \"name\": \"Test User\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -80,7 +90,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"user@test.com\",\n    \"password\": \"123456\"\n}",
+					"raw": "{\n    \"email\": \"{{testEmail}}\",\n    \"password\": \"123456\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
