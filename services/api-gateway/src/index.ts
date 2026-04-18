@@ -134,6 +134,8 @@ app.use('/payments', proxy(services.payment, getProxyOptions()));
 app.use('/pricing', proxy(services.pricing, getProxyOptions()));
 app.use('/notifications', proxy(services.notification, getProxyOptions()));
 app.use('/eta', proxy(services.aiMatching, getProxyOptions()));
+app.use('/match', proxy(services.aiMatching, getProxyOptions()));
+app.use('/forecast', proxy(services.aiMatching, getProxyOptions()));
 app.use('/fraud', proxy(services.fraud, getProxyOptions()));
 
 // ─── Local Routes ─────────────────────────────────────────────

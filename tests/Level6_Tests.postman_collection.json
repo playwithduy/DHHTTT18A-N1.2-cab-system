@@ -4,6 +4,16 @@
 		"name": "LEVEL 6 – AI AGENT LOGIC",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
 	"item": [
 		{
 			"name": "51. Agent chọn driver gần nhất (Speed)",
@@ -156,6 +166,7 @@
 		}
 	],
 	"variable": [
-		{ "key": "baseUrl", "value": "http://localhost:8080" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" }
 	]
 }

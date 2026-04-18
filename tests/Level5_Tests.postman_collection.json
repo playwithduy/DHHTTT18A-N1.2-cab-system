@@ -4,6 +4,16 @@
 		"name": "LEVEL 5 – AI SERVICE VALIDATION",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
 	"item": [
 		{
 			"name": "41. ETA model output trong range hợp lý",
@@ -285,6 +295,7 @@
 		}
 	],
 	"variable": [
-		{ "key": "baseUrl", "value": "http://localhost:8080" }
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "accessToken", "value": "" }
 	]
 }
