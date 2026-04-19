@@ -121,8 +121,8 @@ jobs:
         context: ./services/api-gateway
         push: true
         tags: |
-          nguyenvanduy/cab-system-api-gateway:latest
-          nguyenvanduy/cab-system-api-gateway:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-api-gateway:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-api-gateway:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -132,8 +132,8 @@ jobs:
         context: ./services/auth-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-auth-service:latest
-          nguyenvanduy/cab-system-auth-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-auth-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-auth-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -143,8 +143,8 @@ jobs:
         context: ./services/booking-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-booking-service:latest
-          nguyenvanduy/cab-system-booking-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-booking-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-booking-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -154,8 +154,8 @@ jobs:
         context: ./services/driver-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-driver-service:latest
-          nguyenvanduy/cab-system-driver-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-driver-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-driver-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -165,8 +165,8 @@ jobs:
         context: ./services/payment-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-payment-service:latest
-          nguyenvanduy/cab-system-payment-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-payment-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-payment-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -176,8 +176,8 @@ jobs:
         context: ./services/pricing-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-pricing-service:latest
-          nguyenvanduy/cab-system-pricing-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-pricing-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-pricing-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -187,8 +187,8 @@ jobs:
         context: ./services/notification-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-notification-service:latest
-          nguyenvanduy/cab-system-notification-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-notification-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-notification-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -198,8 +198,8 @@ jobs:
         context: ./services/ai-matching-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-ai-matching-service:latest
-          nguyenvanduy/cab-system-ai-matching-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-ai-matching-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-ai-matching-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -209,8 +209,8 @@ jobs:
         context: ./services/fraud-service
         push: true
         tags: |
-          nguyenvanduy/cab-system-fraud-service:latest
-          nguyenvanduy/cab-system-fraud-service:${{ steps.meta.outputs.sha_short }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-fraud-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-fraud-service:${{ steps.meta.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -223,13 +223,13 @@ jobs:
         echo "   Timestamp: ${{ steps.meta.outputs.timestamp }}"
         echo "   Docker Hub: hub.docker.com/u/nguyenvanduy"
         echo "   Images pushed:"
-        echo "   → nguyenvanduy/cab-system-api-gateway:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-auth-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-booking-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-driver-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-payment-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-pricing-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-notification-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-ai-matching-service:${{ steps.meta.outputs.sha_short }}"
-        echo "   → nguyenvanduy/cab-system-fraud-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-api-gateway:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-auth-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-booking-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-driver-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-payment-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-pricing-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-notification-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-ai-matching-service:${{ steps.meta.outputs.sha_short }}"
+        echo "   → ${{ secrets.DOCKERHUB_USERNAME }}/cab-system-fraud-service:${{ steps.meta.outputs.sha_short }}"
         echo "========================================================"
