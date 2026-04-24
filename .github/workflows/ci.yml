@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      JWT_SECRET: cabgo_secret_32_characters_long_system_test
+      STRIPE_SECRET_KEY: sk_test_dummy
+      MAPBOX_TOKEN: pk.dummy
 
     steps:
     - name: Checkout Code
@@ -32,14 +35,11 @@ jobs:
     - name: Spin up Infrastructure & Microservices
       run: |
         # 1. Start Infrastructure First
-        docker compose up -d mongodb redis zookeeper kafka
+        docker compose up -d postgres redis zookeeper kafka
         echo "Waiting 15s for databases to boot..."
         sleep 15
         
-        # 2. Initialize MongoDB Replica Set (rs0) - Required for Prisma Transactions
-        docker compose exec -T mongodb mongosh --eval "rs.initiate()" || true
-        
-        # 3. Start Core Backend Services (EXCLUDE heavy frontends to prevent Runner OOM)
+        # 2. Start Core Backend Services (EXCLUDE heavy frontends to prevent Runner OOM)
         docker compose up -d --build api-gateway auth-service booking-service ride-service driver-service payment-service pricing-service notification-service ai-matching-service fraud-service
         
     - name: Wait for Services to Warm Up
