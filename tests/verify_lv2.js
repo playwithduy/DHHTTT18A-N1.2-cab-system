@@ -96,7 +96,8 @@ async function runTests() {
 
     // 17. Fraud API với input thiếu field
     console.log('\n[17] TEST: Fraud API với input thiếu field -> 400');
-    const res17 = await request('POST', '/fraud', { user_id: 'USR123' }, token);
+    // Kiểm tra Fraud Service (Level 5)
+    const res17 = await request('POST', '/fraud', { user_id: 'test_user' }, token);
     console.log('Expected: HTTP 400, Message: "missing required fields"');
     console.log('Result: HTTP', res17.status, ', Message:', res17.data.message);
     if (res17.status === 400) console.log('✔ PASS'); else console.log('❌ FAIL');

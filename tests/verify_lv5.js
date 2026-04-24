@@ -32,7 +32,8 @@ async function runTests() {
 
     // 43. Testing Fraud Detection
     console.log('\n43. Testing Fraud Detection (simulate)...');
-    const fraudRes = await axios.post(`${baseUrl}/fraud`, { userId: 'test_user', amount: 5000000, simulate_fraud: true }, { headers: authHeader });
+    // Kiểm tra Fraud Service (Level 5)
+    const fraudRes = await axios.post(`${baseUrl}/fraud`, { user_id: 'test_user', amount: 5000000, simulate_fraud: true }, { headers: authHeader });
     if (fraudRes.data.data.isFraud) {
         console.log('✔ Success. Fraud flagged correctly.');
     } else {
