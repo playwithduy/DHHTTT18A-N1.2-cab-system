@@ -28,7 +28,7 @@ export const validate = (schema: z.ZodObject<any, any>) =>
         const issues = error.issues;
         console.log('🔍 Validation Error Details:', JSON.stringify(issues));
 
-        // 1. Kiểm tra nếu có bất kỳ lỗi nào báo "Required" hoặc thiếu trường
+        // --- NHẮC BÀI: Chỗ này xử lý TC11 (Thiếu pickup/drop) ---
         const isMissing = issues.some(i => 
           i.message === 'Required' || 
           (i as any).received === 'undefined' ||
@@ -46,7 +46,7 @@ export const validate = (schema: z.ZodObject<any, any>) =>
           });
         }
 
-        // 2. Xử lý riêng cho trường payment_method (Case 14: yêu cầu mã 400)
+        // --- NHẮC BÀI: Chỗ này xử lý TC14 (Sai phương thức thanh toán) ---
         const paymentIssue = issues.find(i => i.path[0] === 'payment_method');
         if (paymentIssue) {
           return res.status(400).json({
@@ -55,7 +55,7 @@ export const validate = (schema: z.ZodObject<any, any>) =>
           });
         }
 
-        // 3. Nếu không phải các trường hợp trên thì mới là 422 (Sai định dạng chung)
+        // --- NHẮC BÀI: Chỗ này xử lý TC12 (Sai định dạng tọa độ lat/lng) ---
         return res.status(422).json({
           success: false,
           message: 'Validation failed: Invalid input format',

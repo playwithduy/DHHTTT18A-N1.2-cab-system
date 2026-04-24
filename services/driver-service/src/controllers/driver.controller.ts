@@ -38,6 +38,7 @@ export const updateStatus = async (req: Request, res: Response) => {
     });
 
     // Sync to Redis for AI Matching (Requirement 23)
+    // --- NHẮC BÀI: Đây là TC5 (Tài xế bật Online - Đồng bộ vào Redis Geo) ---
     if (status === 'ONLINE' && location?.lat && location?.lng) {
       await redis.geoAdd('drivers:geo', {
         longitude: location.lng,
@@ -57,6 +58,7 @@ export const updateStatus = async (req: Request, res: Response) => {
         lng: location.lng.toString()
       });
     } else if (status === 'OFFLINE') {
+      // --- NHẮC BÀI: Đây là TC57 (Tài xế Offline - Xóa khỏi Redis Geo để AI không tìm thấy) ---
       await redis.zRem('drivers:geo', driverId);
     }
 
