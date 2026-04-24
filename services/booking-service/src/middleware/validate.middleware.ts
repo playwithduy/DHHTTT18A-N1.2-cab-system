@@ -28,13 +28,26 @@ export const validate = (schema: z.ZodObject<any, any>) =>
         const issues = error.issues;
         console.log('🔍 Validation Error Details:', JSON.stringify(issues));
 
-        // Ép mã lỗi 400 và message có chữ "required" cho mọi lỗi validation
-        return res.status(400).json({
+        // 1. Kiểm tra nếu có bất kỳ trường nào bị THIẾU (undefined)
+        const missingField = issues.find(i => (i as any).received === 'undefined');
+        if (missingField) {
+          return res.status(400).json({
+            success: false,
+            message: `${missingField.path.join('.')} is required`,
+            errors: issues.map(e => ({
+              field: e.path.join('.'),
+              message: `${e.path.join('.')} is required`
+            }))
+          });
+        }
+
+        // 2. Nếu không thiếu nhưng sai định dạng (ví dụ: truyền string vào number)
+        return res.status(422).json({
           success: false,
-          message: `${issues[0].path.join('.')} is required`,
+          message: 'Validation failed: Invalid input format',
           errors: issues.map(e => ({
             field: e.path.join('.'),
-            message: `${e.path.join('.')} is required`
+            message: e.message
           }))
         });
       }
