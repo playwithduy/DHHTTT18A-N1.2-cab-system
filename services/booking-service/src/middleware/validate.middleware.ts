@@ -27,20 +27,26 @@ export const validate = (schema: z.ZodObject<any, any>) =>
       if (error instanceof z.ZodError) {
         const issues = error.issues;
         
-        const pickupIssue = issues.find(i => i.path[0] === 'pickup' || (i.path[0] === 'pickup' && i.code === 'invalid_type'));
-        if (pickupIssue && (pickupIssue.code === 'invalid_type' && (pickupIssue as any).received === 'undefined')) {
-          return res.status(400).json({ success: false, message: 'pickup is required' });
+        // 1. Kiểm tra nếu thiếu trường (received === 'undefined')
+        const missingField = issues.find(i => (i as any).received === 'undefined');
+        if (missingField) {
+          return res.status(400).json({
+            success: false,
+            message: `${missingField.path.join('.')} is required`, // Khớp chữ "required" cho Postman
+            errors: issues.map(e => ({
+              field: e.path.join('.'),
+              message: `${e.path.join('.')} is required`
+            }))
+          });
         }
 
-        const isMissingField = issues.some(e => e.code === 'invalid_type' && (e as any).received === 'undefined');
+        // 2. Kiểm tra nếu sai format (Case 12: Lat/Lng format)
         const isInvalidFormat = issues.some(e => e.code === 'invalid_type' && (e as any).received !== 'undefined');
-        
         let status = 400;
-        if (isInvalidFormat) status = 422; // Case 12
+        if (isInvalidFormat) status = 422; 
 
-        // Case 14: specific message for payment method
-        const paymentIssue = issues.find(i => i.path[0] === 'payment_method');
-        if (paymentIssue) {
+        // 3. Xử lý riêng cho Payment Method (Case 14)
+        if (issues.some(i => i.path[0] === 'payment_method')) {
           return res.status(400).json({ success: false, message: 'Invalid payment method' });
         }
 
