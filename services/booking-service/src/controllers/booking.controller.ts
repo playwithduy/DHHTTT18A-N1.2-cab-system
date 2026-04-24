@@ -180,6 +180,7 @@ export const createBooking = async (req: Request, res: Response) => {
 
   const lockKey = `lock:booking:${userId}`;
   // TC21: Sử dụng Distributed Lock (Redis) để ngăn chặn Race Condition
+  // Giải thích: Dùng Redis SET NX để đảm bảo tại một thời điểm mỗi User chỉ được đặt 1 cuốc duy nhất, tránh việc nhấn nút quá nhanh tạo ra 2 cuốc xe thừa.
   let acquired: any = await redis.set(lockKey, 'locked', { NX: true, EX: 30 });
   if (req.body.simulate_race_condition === true) acquired = false;
   if (!acquired) return res.status(409).json({ success: false, message: 'Another booking is in progress' });
@@ -192,11 +193,13 @@ export const createBooking = async (req: Request, res: Response) => {
     let is_fallback = false;
 
     const pricingAxios = axios.create();
+    // TC26: Triển khai Retry Strategy (Cấu hình tự động gọi lại khi gặp lỗi mạng)
+    // Giải thích: Dùng Exponential Backoff (thời gian chờ tăng dần) để tránh gây áp lực thêm cho service đang gặp sự cố.
     axiosRetry(pricingAxios, {
       retries: 2,
       retryDelay: (retryCount) => {
         retry_attempts = retryCount;
-        return 200 * Math.pow(2, retryCount - 1);
+        return 200 * Math.pow(2, retryCount - 1); // 200ms, 400ms...
       },
       retryCondition: (error) => error.code === 'ECONNABORTED' || axiosRetry.isNetworkOrIdempotentRequestError(error)
     });
@@ -206,6 +209,8 @@ export const createBooking = async (req: Request, res: Response) => {
     let aiRes: any;
 
     try {
+      // Cơ chế Circuit Breaker: Tự động ngắt kết nối nếu Service AI hoặc Driver gặp lỗi liên tục.
+      // Giải thích: Tránh hiện tượng "Cascading Failure" (lỗi dây chuyền) làm sập toàn bộ hệ thống.
       [driverRes, aiRes] = await Promise.all([
         driverCircuitBreaker.fire(pickup.lat, pickup.lng),
         aiCircuitBreaker.fire({ pickup, vehicleType: resolvedVehicleType })
@@ -274,6 +279,9 @@ export const createBooking = async (req: Request, res: Response) => {
         }
       });
 
+      // TC25: Triển khai Transactional Outbox Pattern
+      // Giải thích: Lưu sự kiện (Outbox) vào cùng một Transaction với Booking. Nếu lưu Booking lỗi -> Outbox cũng không được tạo. 
+      // Nếu cả 2 thành công -> Worker sẽ đọc Outbox để gửi tin nhắn đến Kafka, đảm bảo không bao giờ bị mất sự kiện (Reliable Messaging).
       await tx.outbox.create({
         data: {
           topic: 'ride_events',

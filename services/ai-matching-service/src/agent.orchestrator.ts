@@ -99,12 +99,14 @@ export class MatchingAgent {
         console.warn(`[MatchingAgent][${traceId}] TC56: Pricing tool failed after retries. Using calculated fallback price=${ridePrice} (base=${AGENT_CONFIG.DEFAULT_BASE_FARE} + ${rideDistanceKm}km * ${AGENT_CONFIG.DEFAULT_PER_KM_RATE}/km). Error: ${err.message}`);
       }
 
-      // TC51/52/53: Priority-based multi-objective scoring
+      // TC51/52/53: Priority-based multi-objective scoring (Thuật toán đa mục tiêu)
+      // Giải thích: Mỗi chế độ ưu tiên (speed, quality, balanced) sẽ có bộ trọng số (Weights) khác nhau. 
+      // Ví dụ: Quality (TC52) sẽ đặt trọng số Rating cao nhất (0.70) để chọn tài xế 5 sao.
       const priority = options.priority || 'balanced';
       const weights = {
-        speed:    { rating: 0.10, eta: 0.70, reliability: 0.20 }, // TC51: nearest (low ETA wins)
-        quality:  { rating: 0.70, eta: 0.10, reliability: 0.20 }, // TC52: highest rating wins
-        balanced: { rating: 0.35, eta: 0.45, reliability: 0.20 }, // TC53: ETA vs price trade-off
+        speed:    { rating: 0.10, eta: 0.70, reliability: 0.20 }, // Ưu tiên gần nhất
+        quality:  { rating: 0.70, eta: 0.10, reliability: 0.20 }, // Ưu tiên chất lượng
+        balanced: { rating: 0.35, eta: 0.45, reliability: 0.20 }, // Cân bằng cả hai
       }[priority];
 
       const validResults = onlineCandidates.map(driver => {
@@ -114,10 +116,11 @@ export class MatchingAgent {
         const accRate = driver.acceptanceRate ?? AGENT_CONFIG.DEFAULT_ACCEPTANCE;
         const rides   = driver.totalRides    ?? AGENT_CONFIG.DEFAULT_RIDES;
 
-        const ratingNorm  = rating / AGENT_CONFIG.MAX_RATING;
-        const etaNorm     = Math.max(0, 1 - eta / AGENT_CONFIG.MAX_ETA_NORM);
+        const ratingNorm  = rating / AGENT_CONFIG.MAX_RATING; // Chuẩn hóa Rating (0-1)
+        const etaNorm     = Math.max(0, 1 - eta / AGENT_CONFIG.MAX_ETA_NORM); // Chuẩn hóa ETA (ngắn hơn thì điểm cao hơn)
         const reliability = (accRate * 0.6) + (Math.min(rides, AGENT_CONFIG.MAX_RIDES_NORM) / AGENT_CONFIG.MAX_RIDES_NORM) * 0.4;
 
+        // Công thức tính tổng điểm (Scoring Function):
         const score = (ratingNorm * weights.rating) + (etaNorm * weights.eta) + (reliability * weights.reliability);
 
         // TC53: Price includes ETA surcharge (multi-objective)
@@ -164,7 +167,8 @@ export class MatchingAgent {
       };
 
     } catch (error: any) {
-      // TC60: Fallback to rule-based logic when AI fails
+      // TC60: Cơ chế Fallback sang Rule-based logic khi AI sập.
+      // Giải thích: Nếu service AI hoặc Tool gặp lỗi, hệ thống sẽ tự động chuyển sang thuật toán dự phòng (ai gần nhất thì chọn) để đảm bảo tính sẵn sàng (Availability).
       console.error(`[MatchingAgent][${traceId}] TC60: AI failure, switching to rule-based fallback. Error: ${error.message}`);
       return this.fallbackDecision(onlineCandidates, traceId);
     }
