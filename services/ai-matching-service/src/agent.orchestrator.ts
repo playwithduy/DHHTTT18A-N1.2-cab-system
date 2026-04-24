@@ -99,9 +99,8 @@ export class MatchingAgent {
         console.warn(`[MatchingAgent][${traceId}] TC56: Pricing tool failed after retries. Using calculated fallback price=${ridePrice} (base=${AGENT_CONFIG.DEFAULT_BASE_FARE} + ${rideDistanceKm}km * ${AGENT_CONFIG.DEFAULT_PER_KM_RATE}/km). Error: ${err.message}`);
       }
 
-      // TC51/52/53: Priority-based multi-objective scoring (Thuật toán đa mục tiêu)
-      // Giải thích: Mỗi chế độ ưu tiên (speed, quality, balanced) sẽ có bộ trọng số (Weights) khác nhau. 
-      // Ví dụ: Quality (TC52) sẽ đặt trọng số Rating cao nhất (0.70) để chọn tài xế 5 sao.
+      // TC51/52/53: Multi-objective Scoring (Cơ chế chấm điểm đa mục tiêu)
+      // Áp dụng bộ trọng số (Weights) khác nhau tùy theo chế độ ưu tiên: Speed, Quality, hoặc Balanced.
       const priority = options.priority || 'balanced';
       const weights = {
         speed:    { rating: 0.10, eta: 0.70, reliability: 0.20 }, // Ưu tiên gần nhất
@@ -116,11 +115,11 @@ export class MatchingAgent {
         const accRate = driver.acceptanceRate ?? AGENT_CONFIG.DEFAULT_ACCEPTANCE;
         const rides   = driver.totalRides    ?? AGENT_CONFIG.DEFAULT_RIDES;
 
-        const ratingNorm  = rating / AGENT_CONFIG.MAX_RATING; // Chuẩn hóa Rating (0-1)
-        const etaNorm     = Math.max(0, 1 - eta / AGENT_CONFIG.MAX_ETA_NORM); // Chuẩn hóa ETA (ngắn hơn thì điểm cao hơn)
+        const ratingNorm  = rating / AGENT_CONFIG.MAX_RATING; // Chuẩn hóa dữ liệu về thang điểm 0-1
+        const etaNorm     = Math.max(0, 1 - eta / AGENT_CONFIG.MAX_ETA_NORM); 
         const reliability = (accRate * 0.6) + (Math.min(rides, AGENT_CONFIG.MAX_RIDES_NORM) / AGENT_CONFIG.MAX_RIDES_NORM) * 0.4;
 
-        // Công thức tính tổng điểm (Scoring Function):
+        // Scoring Function: Tính tổng điểm dựa trên các tham số đã được chuẩn hóa
         const score = (ratingNorm * weights.rating) + (etaNorm * weights.eta) + (reliability * weights.reliability);
 
         // TC53: Price includes ETA surcharge (multi-objective)
@@ -167,8 +166,8 @@ export class MatchingAgent {
       };
 
     } catch (error: any) {
-      // TC60: Cơ chế Fallback sang Rule-based logic khi AI sập.
-      // Giải thích: Nếu service AI hoặc Tool gặp lỗi, hệ thống sẽ tự động chuyển sang thuật toán dự phòng (ai gần nhất thì chọn) để đảm bảo tính sẵn sàng (Availability).
+      // TC60: Rule-based Fallback Logic
+      // Tự động chuyển sang thuật toán dự phòng (Proximity-based) để đảm bảo tính sẵn sàng khi Service AI gặp sự cố.
       console.error(`[MatchingAgent][${traceId}] TC60: AI failure, switching to rule-based fallback. Error: ${error.message}`);
       return this.fallbackDecision(onlineCandidates, traceId);
     }
