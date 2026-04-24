@@ -388,7 +388,9 @@ export const createBooking = async (req: Request, res: Response) => {
         await redis.del(lockKey);
         return res.status(200).json({ success: true, data: mapBooking(pendingBooking), message: 'Booking created. Payment pending due to network timeout. Will retry asynchronously.' });
       } else {
-        // TC37: Hard failure — compensation, cancel booking
+        // TC33: Transaction Rollback (Saga Compensation) - Khi thanh toán cứng thất bại
+        // Vì không thể giữ Transaction DB khi gọi API bên ngoài, ta sử dụng bước bù đắp
+        // để cập nhật trạng thái cuốc xe về CANCELLED, đảm bảo không có trạng thái "dang dở".
         const cancelledBooking = await prisma.booking.update({ 
           where: { id: result.id }, 
           data: { 
