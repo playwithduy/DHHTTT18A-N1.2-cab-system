@@ -57,6 +57,30 @@ const DRIVERS = [
     totalRides:    300,
     vehicleType:   'car',
   },
+  {
+    userId:        'DRV_LV3_PM',
+    vehicleModel:  'Level 3 Toyota',
+    vehiclePlate:  '51L-003',
+    status:        'OFFLINE',
+    currentLat:    PICKUP_LAT,
+    currentLng:    PICKUP_LNG,
+    rating:        4.5,
+    acceptanceRate: 0.9,
+    totalRides:    100,
+    vehicleType:   'car',
+  },
+  {
+    userId:        'DRV_TEST_789',
+    vehicleModel:  'Level 3 Honda',
+    vehiclePlate:  '51L-789',
+    status:        'OFFLINE',
+    currentLat:    PICKUP_LAT,
+    currentLng:    PICKUP_LNG,
+    rating:        5.0,
+    acceptanceRate: 1.0,
+    totalRides:    999,
+    vehicleType:   'car',
+  },
 ];
 
 async function main() {
