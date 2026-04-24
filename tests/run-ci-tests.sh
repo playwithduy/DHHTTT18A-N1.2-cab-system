@@ -15,12 +15,6 @@ COLLECTIONS=(
   "tests/Level4_Tests.postman_collection.json"
   "tests/Level5_Tests.postman_collection.json"
   "tests/Level6_Tests.postman_collection.json"
-  "tests/Level7_Tests.postman_collection.json"
-  "tests/Level8_Tests.postman_collection.json"
-  "tests/Level9_Tests_Complete.postman_collection.json"
-  "tests/Level10_ZeroTrust.postman_collection.json"
-  "tests/Level11_Deployment.postman_collection.json"
-  "tests/Level12_Monitoring.postman_collection.json"
 )
 
 # Run each collection

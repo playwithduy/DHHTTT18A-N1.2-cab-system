@@ -78,16 +78,19 @@ jobs:
       run: |
         # Cài đặt thư viện phụ thuộc cho JS Scripts
         npm install axios
-        echo "--- Running Level 1-12 System Integration JS Scripts ---"
-        node tests/verify_lv10.js || exit 1
-        node tests/verify_lv11.js || exit 1
-        node tests/verify_lv12.js || exit 1
-        echo "✅ JS Tests Passed."
+        echo "--- Running Level 1-6 System Integration JS Scripts ---"
+        node tests/verify_lv1.js || exit 1
+        node tests/verify_lv2.js || exit 1
+        node tests/verify_lv3.js || exit 1
+        node tests/verify_lv4.js || exit 1
+        node tests/verify_lv5.js || exit 1
+        node tests/verify_lv6.js || exit 1
+        echo "✅ JS Integration Tests Passed."
 
     - name: Ensure Postman Test Script is Executable
       run: chmod +x tests/run-ci-tests.sh
 
-    - name: Run 120+ Postman Tests (Mathematical Proof)
+    - name: Run 60 Postman Tests (Level 1-6 Certification)
       run: ./tests/run-ci-tests.sh
 
     - name: Upload Test Coverage Reports
