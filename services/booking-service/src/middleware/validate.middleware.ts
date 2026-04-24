@@ -26,36 +26,15 @@ export const validate = (schema: z.ZodObject<any, any>) =>
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         const issues = error.issues;
-        
-        // 1. Kiểm tra nếu thiếu trường (received === 'undefined')
-        const missingField = issues.find(i => (i as any).received === 'undefined');
-        if (missingField) {
-          return res.status(400).json({
-            success: false,
-            message: `${missingField.path.join('.')} is required`, // Khớp chữ "required" cho Postman
-            errors: issues.map(e => ({
-              field: e.path.join('.'),
-              message: `${e.path.join('.')} is required`
-            }))
-          });
-        }
+        console.log('🔍 Validation Error Details:', JSON.stringify(issues));
 
-        // 2. Kiểm tra nếu sai format (Case 12: Lat/Lng format)
-        const isInvalidFormat = issues.some(e => e.code === 'invalid_type' && (e as any).received !== 'undefined');
-        let status = 400;
-        if (isInvalidFormat) status = 422; 
-
-        // 3. Xử lý riêng cho Payment Method (Case 14)
-        if (issues.some(i => i.path[0] === 'payment_method')) {
-          return res.status(400).json({ success: false, message: 'Invalid payment method' });
-        }
-
-        return res.status(status).json({
+        // Ép mã lỗi 400 và message có chữ "required" cho mọi lỗi validation
+        return res.status(400).json({
           success: false,
-          message: issues[0].message || 'Validation failed',
+          message: `${issues[0].path.join('.')} is required`,
           errors: issues.map(e => ({
             field: e.path.join('.'),
-            message: e.message
+            message: `${e.path.join('.')} is required`
           }))
         });
       }
