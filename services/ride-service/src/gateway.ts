@@ -185,6 +185,8 @@ export class RealTimeGateway {
   }
 
   // ── Geo query: find nearby drivers ─────────────────────────────
+  // Sử dụng Redis GEOSEARCH để tìm kiếm tài xế trong bán kính chỉ định (km).
+  // Đảm bảo tốc độ truy vấn cực nhanh (O(log(N))) ngay cả khi có hàng triệu tài xế.
   async findNearbyDrivers(lat: number, lng: number, radiusKm: number): Promise<string[]> {
     const results = await this.redisClient.geoSearch(
       GEO_KEY,

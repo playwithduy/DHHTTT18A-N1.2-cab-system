@@ -27,7 +27,7 @@ const fraudCheckSchema = z.object({
 app.post(['/', '/fraud', '/check', '/fraud/check'], async (req: Request, res: Response) => {
   try {
     const data = fraudCheckSchema.parse(req.body);
-    
+
     // Case 43: Fraud detection logic (threshold configurable via env FRAUD_AMOUNT_THRESHOLD)
     const isFraud = data.amount > FRAUD_THRESHOLD || (req.body.simulate_fraud === true);
 
