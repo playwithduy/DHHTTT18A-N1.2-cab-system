@@ -28,7 +28,7 @@ export const validate = (schema: z.ZodObject<any, any>) =>
         const issues = error.issues;
         console.log('🔍 Validation Error Details:', JSON.stringify(issues));
 
-        // --- NHẮC BÀI: Chỗ này xử lý TC11 (Thiếu pickup/drop) ---
+        // TC11: Thiếu pickup/drop (Yêu cầu HTTP 400)
         const isMissing = issues.some(i => 
           i.message === 'Required' || 
           (i as any).received === 'undefined' ||
@@ -46,7 +46,7 @@ export const validate = (schema: z.ZodObject<any, any>) =>
           });
         }
 
-        // --- NHẮC BÀI: Chỗ này xử lý TC14 (Sai phương thức thanh toán) ---
+        // TC14: Sai phương thức thanh toán (Yêu cầu HTTP 400)
         const paymentIssue = issues.find(i => i.path[0] === 'payment_method');
         if (paymentIssue) {
           return res.status(400).json({
@@ -55,7 +55,7 @@ export const validate = (schema: z.ZodObject<any, any>) =>
           });
         }
 
-        // --- NHẮC BÀI: Chỗ này xử lý TC12 (Sai định dạng tọa độ lat/lng) ---
+        // TC12: Sai định dạng tọa độ lat/lng (Yêu cầu HTTP 422)
         return res.status(422).json({
           success: false,
           message: 'Validation failed: Invalid input format',

@@ -108,7 +108,7 @@ const mapBooking = (b: any) => ({
 });
 
 export const createBooking = async (req: Request, res: Response) => {
-  // --- NHẮC BÀI: Đây là điểm bắt đầu của TC3 (Tạo cuốc xe) ---
+  // TC3: Điểm bắt đầu quy trình tạo cuốc xe (Orchestration)
   if (req.body.simulate_stress === true) DEGRADED_MODE = true;
   
   const { pickup, drop, distance_km: rawDistanceKm, demand_index = 1.0, vehicleType, vehicle_type, payment_method: rawPaymentMethod, paymentMethod: rawPaymentMethodAlt } = req.body;
@@ -147,7 +147,7 @@ export const createBooking = async (req: Request, res: Response) => {
   const idempotencyKey = (req.headers['x-idempotency-key'] as string) || `auto-lv1-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
   const cached = await redis.get(`idempotency:booking:${idempotencyKey}`);
-  // --- NHẮC BÀI: Chỗ này xử lý TC22 (Idempotency - Chống tạo cuốc trùng lặp khi bấm 2 lần) ---
+  // TC22: Kiểm tra Idempotency để ngăn chặn việc tạo cuốc trùng lặp
   if (cached) {
     console.log(`[idempotency] Cache hit for key ${idempotencyKey}`);
     return res.status(200).json(JSON.parse(cached));
@@ -179,7 +179,7 @@ export const createBooking = async (req: Request, res: Response) => {
   }
 
   const lockKey = `lock:booking:${userId}`;
-  // --- NHẮC BÀI: Chỗ này xử lý TC21 (Redis Distributed Lock - Chống Race Condition / Đặt 2 cuốc cùng lúc) ---
+  // TC21: Sử dụng Distributed Lock (Redis) để ngăn chặn Race Condition
   let acquired: any = await redis.set(lockKey, 'locked', { NX: true, EX: 30 });
   if (req.body.simulate_race_condition === true) acquired = false;
   if (!acquired) return res.status(409).json({ success: false, message: 'Another booking is in progress' });
@@ -247,8 +247,8 @@ export const createBooking = async (req: Request, res: Response) => {
       if (!matchingReason.includes(`Price=${price}`)) matchingReason += `, Price=${price}`;
     }
 
-    // Phase 1: Local DB Creation
-    // --- NHẮC BÀI: Chỗ này là Phase 1 của Saga (Dùng Transaction ACID để đảm bảo dữ liệu nhất quán) ---
+    // Phase 1: Local DB Creation (Saga Pattern)
+    // TC23: Sử dụng Database Transaction (ACID) để đảm bảo tính nhất quán dữ liệu
     let result = await prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({
         data: {

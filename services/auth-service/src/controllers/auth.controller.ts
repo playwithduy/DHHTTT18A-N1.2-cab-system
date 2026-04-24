@@ -50,7 +50,7 @@ export const register = async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
-    // --- NHẮC BÀI: Chỗ này trả về 201 Created cho TC1 (Đăng ký thành công) ---
+    // TC1: Đăng ký người dùng mới thành công (HTTP 201)
     res.status(201).json({
       success: true,
       message: 'Đăng ký thành công',
@@ -88,7 +88,7 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
-    // --- NHẮC BÀI: Chỗ này trả về 200 OK và JWT Token cho TC2 (Đăng nhập) ---
+    // TC2: Đăng nhập thành công, trả về JWT Token (HTTP 200)
     res.status(200).json({
       success: true,
       message: 'Đăng nhập thành công',
