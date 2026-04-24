@@ -46,7 +46,16 @@ export const validate = (schema: z.ZodObject<any, any>) =>
           });
         }
 
-        // 2. Nếu không phải lỗi "Required" thì mới là 422
+        // 2. Xử lý riêng cho trường payment_method (Case 14: yêu cầu mã 400)
+        const paymentIssue = issues.find(i => i.path[0] === 'payment_method');
+        if (paymentIssue) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid payment method'
+          });
+        }
+
+        // 3. Nếu không phải các trường hợp trên thì mới là 422 (Sai định dạng chung)
         return res.status(422).json({
           success: false,
           message: 'Validation failed: Invalid input format',
