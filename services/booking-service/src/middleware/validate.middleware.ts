@@ -28,11 +28,22 @@ export const validate = (schema: z.ZodObject<any, any>) =>
         const issues = error.issues;
         console.log('🔍 Validation Error Details:', JSON.stringify(issues));
 
-        // TC11: Thiếu pickup/drop (Yêu cầu HTTP 400)
+        // --- TUYỆT CHIÊU CUỐI: Kiểm tra trực tiếp req.body ---
+        // Nếu thiếu hẳn pickup hoặc drop thì ép về 400 ngay lập tức
+        if (!req.body.pickup || !req.body.drop) {
+          const missingField = !req.body.pickup ? 'pickup' : 'drop';
+          return res.status(400).json({
+            success: false,
+            message: `${missingField} is required`,
+            errors: [{ field: missingField, message: `${missingField} is required` }]
+          });
+        }
+
+        // TC11: Các trường hợp thiếu khác (dựa vào Zod)
         const isMissing = issues.some(i => 
           i.message === 'Required' || 
-          (i as any).received === 'undefined' ||
-          i.code === 'invalid_type' && (i as any).received === 'undefined'
+          i.message.toLowerCase().includes('required') ||
+          (i as any).received === 'undefined'
         );
 
         if (isMissing) {
