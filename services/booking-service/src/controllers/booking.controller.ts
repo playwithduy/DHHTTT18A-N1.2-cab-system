@@ -157,7 +157,7 @@ export const createBooking = async (req: Request, res: Response) => {
   const isSimulation = req.body.simulate_db_error || req.body.simulate_payment_failure || req.body.simulate_pricing_timeout || req.body.simulate_payment_timeout;
   
   if (!(req.headers['x-idempotency-key']) && !isSimulation && process.env.CI !== 'true') {
-    const idempotencyWindow = new Date(Date.now() - 10000); // 10 seconds for easier testing
+    const fiveMinutesAgo = new Date(Date.now() - 300000); // 5 minutes
     const existingBusinessMatch = await prisma.booking.findFirst({
       where: {
         userId,
@@ -166,7 +166,7 @@ export const createBooking = async (req: Request, res: Response) => {
         dropLat: drop.lat,
         dropLng: drop.lng,
         status: { in: ['PENDING_PAYMENT', 'REQUESTED', 'ACCEPTED'] },
-        createdAt: { gte: idempotencyWindow }
+        createdAt: { gte: fiveMinutesAgo }
       },
       orderBy: { createdAt: 'desc' }
     });
