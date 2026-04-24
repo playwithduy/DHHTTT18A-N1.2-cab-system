@@ -42,6 +42,12 @@ jobs:
         # 2. Start Core Backend Services (EXCLUDE heavy frontends to prevent Runner OOM)
         docker compose up -d --build api-gateway auth-service booking-service ride-service driver-service payment-service pricing-service notification-service ai-matching-service fraud-service
         
+        echo "Pushing Database Schemas..."
+        docker compose exec -T auth-service npx prisma db push --accept-data-loss
+        docker compose exec -T booking-service npx prisma db push --accept-data-loss
+        docker compose exec -T driver-service npx prisma db push --accept-data-loss
+        docker compose exec -T payment-service npx prisma db push --accept-data-loss
+        
     - name: Wait for Services to Warm Up
       run: |
         echo "Waiting for Postgres, Kafka and Node services to initialize..."
