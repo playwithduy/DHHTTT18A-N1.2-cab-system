@@ -48,6 +48,11 @@ jobs:
         docker compose exec -T driver-service npx prisma db push --accept-data-loss
         docker compose exec -T payment-service npx prisma db push --accept-data-loss
         
+        echo "Seeding Test Drivers..."
+        docker compose exec -T driver-service mkdir -p scripts
+        docker cp scripts/seed-drivers.js $(docker compose ps -q driver-service):/app/scripts/seed-drivers.js
+        docker compose exec -T driver-service node scripts/seed-drivers.js
+        
     - name: Wait for Services to Warm Up
       run: |
         echo "Waiting for Postgres, Kafka and Node services to initialize..."
