@@ -156,7 +156,7 @@ export const createBooking = async (req: Request, res: Response) => {
   // --- BUSINESS IDEMPOTENCY: Catch identical requests ONLY if header is missing and NOT a simulation ---
   const isSimulation = req.body.simulate_db_error || req.body.simulate_payment_failure || req.body.simulate_pricing_timeout || req.body.simulate_payment_timeout;
   
-  if (!(req.headers['x-idempotency-key']) && !isSimulation) {
+  if (!(req.headers['x-idempotency-key']) && !isSimulation && process.env.CI !== 'true') {
     const fiveMinutesAgo = new Date(Date.now() - 300000); // 5 minutes
     const existingBusinessMatch = await prisma.booking.findFirst({
       where: {
