@@ -48,6 +48,12 @@
 				},
 				{
 					"name": "3. Tạo booking với input hợp lệ",
+					"event": [
+						{
+							"listen": "test",
+							"script": { "exec": ["var jsonData = pm.response.json(); if(jsonData && jsonData.data) pm.collectionVariables.set(\"lastBookingId\", jsonData.data.id || jsonData.data.booking_id);"], "type": "text/javascript" }
+						}
+					],
 					"request": {
 						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 						"method": "POST",
@@ -113,6 +119,26 @@
 					"name": "13. Driver offline không nhận booking",
 					"event": [
 						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var bookingId = pm.collectionVariables.get(\"lastBookingId\");",
+									"if (bookingId) {",
+									"    pm.sendRequest({",
+									"        url: pm.variables.get(\"baseUrl\") + \"/bookings/\" + bookingId + \"/status\",",
+									"        method: 'PATCH',",
+									"        header: {",
+									"            'Authorization': 'Bearer ' + pm.collectionVariables.get(\"accessToken\"),",
+									"            'Content-Type': 'application/json'",
+									"        },",
+									"        body: { mode: 'raw', raw: JSON.stringify({ status: 'CANCELLED' }) }",
+									"    }, function (err, res) {});",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
 							"listen": "test",
 							"script": { "exec": [
 								"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
@@ -120,6 +146,10 @@
 								"    var jsonData = pm.response.json();",
 								"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
 								"    if (pm.response.code === 200) pm.expect(jsonData.success).to.be.false;",
+								"});",
+								"pm.test(\"Returns message 'No drivers available'\", () => {",
+								"    var jsonData = pm.response.json();",
+								"    pm.expect(jsonData.message).to.eql(\"No drivers available\");",
 								"});"
 							], "type": "text/javascript" }
 						}
@@ -230,7 +260,7 @@
 						"method": "POST",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": \"USR123\"\n}",
+							"raw": "{\n    \"user_id\": \"{{userId}}\"\n}",
 							"options": { "raw": { "language": "json" } }
 						},
 						"url": { "raw": "{{baseUrl}}/fraud/check", "host": ["{{baseUrl}}"], "path": ["fraud", "check"] }
@@ -312,12 +342,42 @@
 						},
 						"url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
 					}
+				},
+				{
+					"name": "81. Input chứa script/SQLi (Register) -> 422",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Returns 422 Unprocessable Entity\", () => { pm.response.to.have.status(422); });",
+									"pm.test(\"Error message is correct\", () => {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.message).to.include(\"Validation failed\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"hacker@test.com\",\n    \"password\": \"123456\",\n    \"name\": \"<script>alert(1)</script>\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+					}
 				}
 			]
 		}
 	],
 	"variable": [
 		{ "key": "baseUrl", "value": "http://localhost:8080" },
-		{ "key": "accessToken", "value": "" }
+		{ "key": "accessToken", "value": "" },
+		{ "key": "userId", "value": "" }
 	]
 }

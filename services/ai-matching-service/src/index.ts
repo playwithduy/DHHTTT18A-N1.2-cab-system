@@ -16,6 +16,19 @@ interface DriverFeatures {
 
 const MODEL_VERSION = 'v1.2.0-alpha';
 
+// ── Centralized AI Matching Configuration (NO hardcoded magic numbers) ──
+const AI_CONFIG = {
+  AVG_SPEED_FACTOR:    parseFloat(process.env.AVG_SPEED_FACTOR || '2'),  // minutes per km (~30km/h urban)
+  SEARCH_RADIUS_KM:    parseInt(process.env.SEARCH_RADIUS_KM || '50'),
+  DEFAULT_DISTANCE_KM: parseInt(process.env.DEFAULT_DISTANCE_KM || '5'),
+  DEFAULT_RATING:      parseFloat(process.env.DEFAULT_DRIVER_RATING || '4.5'),
+  DEFAULT_ACCEPTANCE:  parseFloat(process.env.DEFAULT_ACCEPTANCE_RATE || '0.9'),
+  DEFAULT_RIDES:       parseInt(process.env.DEFAULT_TOTAL_RIDES || '100'),
+  DEFAULT_VEHICLE:     process.env.DEFAULT_VEHICLE_TYPE || 'car',
+  DRIFT_THRESHOLD_KM:  parseInt(process.env.DRIFT_THRESHOLD_KM || '100'),
+  MAX_DISTANCE_KM:     parseInt(process.env.MAX_DISTANCE_KM || '1000'),
+};
+
 import { MatchingAgent } from './agent.orchestrator';
 
 const agent = new MatchingAgent();
@@ -29,6 +42,18 @@ export class AIMatchingService {
     const brokers = (process.env.KAFKA_BROKERS || 'localhost:9092').split(',');
     const kafka   = new Kafka({ clientId: 'ai-matching-service', brokers, retry: { retries: 0 }, connectionTimeout: 1000 });
     this.producer = kafka.producer();
+  }
+
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth radius in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   async start() {
@@ -46,30 +71,62 @@ export class AIMatchingService {
     const lng = parseFloat(rideData.pickup?.lng || 0);
     const { vehicleType = 'any', priority = 'balanced', simulate_tool_error = false, simulate_missing_context = false } = rideData;
 
-    // 1. Get Candidates (Mocking for Cert)
-    // We provide 3 distinct candidates for Level 6 selection logic
-    const candidates: DriverFeatures[] = [
-      { // Fast (2m) but low rating (4.0)
-        driverId: '69e38c2212a9f768089bf001', lat, lng, rating: 4.0, acceptanceRate: 0.9, totalRides: 100,
-        vehicleType, distanceKm: 1, etaMinutes: 2, status: 'AVAILABLE'
-      },
-      { // Best Quality (4.9) but slower (5m)
-        driverId: '69e38c2212a9f768089bf002', lat, lng, rating: 4.9, acceptanceRate: 0.95, totalRides: 500,
-        vehicleType, distanceKm: 2, etaMinutes: 5, status: 'AVAILABLE'
-      },
-      { // Balanced (4.5 rating, 7m eta)
-        driverId: '69e38c2212a9f768089bf003', lat, lng, rating: 4.5, acceptanceRate: 0.8, totalRides: 200,
-        vehicleType, distanceKm: 3, etaMinutes: 7, status: 'AVAILABLE'
+    // 1. Get Candidates from Redis (Real Geo-search)
+    let candidates: DriverFeatures[] = [];
+    try {
+      if (this.redis.isOpen) {
+        // Search online drivers within configurable radius
+        const driverIds = await this.redis.geoSearch('drivers:geo', 
+          { latitude: lat, longitude: lng }, 
+          { radius: AI_CONFIG.SEARCH_RADIUS_KM, unit: 'km' }
+        );
+
+        for (const dId of driverIds) {
+          const [features, loc] = await Promise.all([
+            this.redis.hGetAll(`driver:${dId}:features`),
+            this.redis.hGetAll(`driver:${dId}:location`)
+          ]);
+
+          if (features && loc) {
+            const dLat = parseFloat(loc.lat);
+            const dLng = parseFloat(loc.lng);
+            
+            // Case 23: Calculate real distance instead of hardcoding
+            const distance = this.calculateDistance(lat, lng, dLat, dLng);
+            // Dynamic ETA: AVG_SPEED_FACTOR minutes per km (configurable via env)
+            const eta = Math.max(1, Math.ceil(distance * AI_CONFIG.AVG_SPEED_FACTOR));
+
+            candidates.push({
+              driverId: dId,
+              lat: dLat,
+              lng: dLng,
+              rating: parseFloat(features.rating || String(AI_CONFIG.DEFAULT_RATING)),
+              acceptanceRate: parseFloat(features.acceptanceRate || String(AI_CONFIG.DEFAULT_ACCEPTANCE)),
+              totalRides: parseInt(features.totalRides || String(AI_CONFIG.DEFAULT_RIDES)),
+              vehicleType: features.vehicleType || AI_CONFIG.DEFAULT_VEHICLE,
+              distanceKm: parseFloat(distance.toFixed(2)),
+              etaMinutes: eta,
+              status: 'AVAILABLE'
+            });
+          }
+        }
       }
-    ];
+    } catch (err) {
+      console.error('[ai-matching] Error fetching candidates from Redis:', err);
+    }
 
     // Filter by vehicle
-    const filtered = candidates.filter(d => vehicleType === 'any' || d.vehicleType === vehicleType);
+    let filtered = candidates.filter(d => vehicleType === 'any' || d.vehicleType === vehicleType);
 
-    // 3. Agentic decision
-    const decision = await agent.selectBestDriver(filtered, rideData.distance_km || 5, {
+    if (filtered.length === 0) {
+      console.log('[ai-matching] No candidates found in Redis. No mock drivers will be used.');
+    }
+
+    // 3. Agentic decision — pass demand_index dynamically from request body
+    const decision = await agent.selectBestDriver(filtered, rideData.distance_km || AI_CONFIG.DEFAULT_DISTANCE_KM, {
         priority,
-        simulate_tool_error
+        simulate_tool_error,
+        demand_index: rideData.demand_index,
     });
 
     const latencyMs = Date.now() - startTime;
@@ -81,6 +138,7 @@ export class AIMatchingService {
       score:    decision.metrics.score,
       eta:      decision.metrics.eta,
       reasoning: decision.reasoning,
+      drivers:   decision.topDrivers, // Added this
       modelVersion: MODEL_VERSION,
       latencyMs
     };
@@ -120,29 +178,23 @@ app.get('/metrics', getMetrics);
 
 app.post(['/', '/match'], async (req, res) => {
   const { pickup, vehicleType, distance_km, simulate_fallback, priority } = req.body;
-  // Detect outlier distance
-  if (distance_km && distance_km > 1000) {
-    return res.status(400).json({ success: false, message: 'Distance exceeds operational limit of 1000km' });
+  // Detect outlier distance using configurable threshold
+  if (distance_km && distance_km > AI_CONFIG.MAX_DISTANCE_KM) {
+    return res.status(400).json({ success: false, message: `Distance exceeds operational limit of ${AI_CONFIG.MAX_DISTANCE_KM}km` });
   }
   const result = await matchingService.matchRide(req.body);
   const isFallback = simulate_fallback === true;
-  const driftDetected = distance_km && distance_km >= 100 ? true : false;
+  const driftDetected = distance_km && distance_km >= AI_CONFIG.DRIFT_THRESHOLD_KM ? true : false;
 
-  // Build reasoning string that includes priority/fallback keywords for Level 6 tests
-  let reasoning = 'AI matched successfully';
+  // Use reasoning from result if available, or build a basic one
+  // Fix reasoning: don't claim success if it failed
+  let reasoning = result.success ? (result.reasoning || 'AI matched successfully') : (result.message || 'Matching failed');
+  
   if (isFallback) {
     reasoning = 'FALLBACK: Using default rule-based driver assignment';
-  } else if (priority === 'speed') {
-    reasoning = 'SPEED: Selected closest driver to minimize pickup time';
-  } else if (priority === 'quality') {
-    reasoning = 'QUALITY: Selected highest-rated driver for best experience';
-  } else if (priority === 'balanced') {
-    reasoning = 'BALANCED: Optimal driver selected using cost-quality tradeoff';
   }
 
-  // Always return at least 1 mock driver so Top-N assertion passes even with empty DB
-  const mockDriver = { driverId: 'DRV_AI_001', name: 'AI Driver', rating: 4.8, distance: 1.2, vehicleType: vehicleType || 'car' };
-  const rawDrivers = result.drivers && result.drivers.length > 0 ? result.drivers : [mockDriver];
+  const rawDrivers = result.drivers || [];
 
   res.json({
     ...result,
@@ -156,7 +208,9 @@ app.post(['/', '/match'], async (req, res) => {
 
 
 app.post('/eta', (req, res) => {
-  const eta = Math.ceil((req.body.distance_km || 1) * 2);
+  const dist = req.body.distance_km !== undefined ? parseFloat(req.body.distance_km) : 1;
+  // Dynamic ETA using configurable speed factor
+  const eta = dist === 0 ? 0 : Math.max(1, Math.ceil(dist * AI_CONFIG.AVG_SPEED_FACTOR));
   res.json({ success: true, data: { eta } });
 });
 
@@ -168,6 +222,6 @@ app.get('/forecast', (req, res) => {
   Promise.resolve(forecast).then(data => res.json({ success: true, data }));
 });
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'ai-matching', version: 'v1.2.0' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'ai-matching', version: MODEL_VERSION, config: { speedFactor: AI_CONFIG.AVG_SPEED_FACTOR, searchRadius: AI_CONFIG.SEARCH_RADIUS_KM } }));
 
 app.listen(3008, () => console.log(`[ai-matching] Running on port 3008`));

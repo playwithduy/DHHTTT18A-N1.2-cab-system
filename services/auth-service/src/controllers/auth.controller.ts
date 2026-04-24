@@ -15,11 +15,6 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name, phone, role } = req.body || {};
 
-    // Case 81, 82: Input Sanitization (Pre-validation)
-    if (name && (String(name).includes('<script>') || String(name).includes('OR 1=1'))) {
-      return res.status(400).json({ success: false, message: 'Invalid characters in input' });
-    }
-
     if (role === 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Cannot register as ADMIN' });
     }
@@ -60,7 +55,10 @@ export const register = async (req: Request, res: Response) => {
       message: 'Đăng ký thành công',
       user_id: user.id,
       data: {
-        user: { id: user.id, email: user.email, name: user.name, role: user.role },
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
         access_token: token
       }
     });
@@ -93,7 +91,10 @@ export const login = async (req: Request, res: Response) => {
       success: true,
       message: 'Đăng nhập thành công',
       data: {
-        user: { id: user.id, email: user.email, name: user.name, role: user.role },
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
         access_token: token
       }
     });

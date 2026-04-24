@@ -111,7 +111,57 @@
 			"response": []
 		},
 		{
-			"name": "3. Tạo booking với input hợp lệ",
+			"name": "3. Driver chuyển trạng thái online",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
+							"pm.test(\"Update driver status returns 200 OK\", () => { pm.response.to.have.status(200); });",
+							"pm.test(\"Success is true\", () => { pm.expect(pm.response.json().success).to.be.true; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"driver_id\": \"DRV001\",\n    \"status\": \"ONLINE\",\n    \"location\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/drivers/status",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"drivers",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Tạo booking với input hợp lệ",
 			"event": [
 				{
 					"listen": "test",
@@ -172,7 +222,7 @@
 			"response": []
 		},
 		{
-			"name": "4. Lấy danh sách booking của user",
+			"name": "5. Lấy danh sách booking của user",
 			"event": [
 				{
 					"listen": "test",
@@ -219,56 +269,6 @@
 					]
 				}
 			},
-			"init_response": []
-		},
-		{
-			"name": "5. Driver chuyển trạng thái online",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Fail-Fast: Status is not 5xx\", () => { pm.response.to.not.be.error; });",
-							"pm.test(\"Update driver status returns 200 OK\", () => { pm.response.to.have.status(200); });",
-							"pm.test(\"Success is true\", () => { pm.expect(pm.response.json().success).to.be.true; });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{accessToken}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"driver_id\": \"DRV001\",\n    \"status\": \"ONLINE\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{baseUrl}}/drivers/status",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"drivers",
-						"status"
-					]
-				}
-			},
 			"response": []
 		},
 		{
@@ -294,6 +294,7 @@
 							"pm.test(\"Status is REQUESTED\", () => {",
 							"    pm.expect(jsonData.success).to.be.true;",
 							"    pm.expect(jsonData.data.status).to.eql(\"REQUESTED\");",
+							"    pm.expect(jsonData.data.created_at || jsonData.data.createdAt).to.be.ok;",
 							"});"
 						],
 						"type": "text/javascript"
@@ -461,7 +462,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"user_id\": \"USR123\",\n    \"message\": \"Your ride is confirmed\"\n}",
+					"raw": "{\n    \"user_id\": \"{{userId}}\",\n    \"message\": \"Your ride is confirmed\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"

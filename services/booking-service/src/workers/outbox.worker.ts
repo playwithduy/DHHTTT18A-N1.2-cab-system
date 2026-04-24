@@ -28,9 +28,12 @@ export const startOutboxWorker = async () => {
 
       for (const msg of pendingMessages) {
         try {
+          const payloadObj = JSON.parse(msg.payload);
+          const messageKey = payloadObj.booking_id || payloadObj.ride_id || msg.id;
+
           await producer.send({
             topic: msg.topic,
-            messages: [{ value: msg.payload }]
+            messages: [{ key: messageKey, value: msg.payload }]
           });
 
           await prisma.outbox.update({

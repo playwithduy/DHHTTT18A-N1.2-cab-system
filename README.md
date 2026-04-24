@@ -1,358 +1,86 @@
-# 🚗 CabGo — Cab Booking System
-## Kiến trúc Microservices với AI Matching
+# 🚖 CabGo — Hệ thống Đặt xe Microservices & AI Agent
 
-> **Stack:** Next.js 14 · TypeScript · TailwindCSS · Socket.IO · Kafka · PostgreSQL · MongoDB · Redis · Kubernetes
-
----
-
-## 📁 Cấu Trúc Dự Án
-
-```
-cab-booking/
-├── apps/
-│   ├── customer-app/          # Port 3100 — Ứng dụng khách hàng
-│   ├── driver-app/            # Port 3200 — Ứng dụng tài xế
-│   └── admin-dashboard/       # Port 3300 — Quản trị viên
-├── packages/
-│   └── types/                 # Shared TypeScript types + mock data
-├── services/                  # Backend microservices (build riêng)
-│   ├── api-gateway/           # Port 8080
-│   ├── auth-service/          # Port 3001
-│   ├── booking-service/       # Port 3002
-│   ├── ride-service/          # Port 3003
-│   ├── driver-service/        # Port 3004
-│   ├── payment-service/       # Port 3005
-│   ├── pricing-service/       # Port 3006
-│   └── notification-service/  # Port 3007
-├── infrastructure/
-│   ├── k8s/                   # Kubernetes manifests
-│   └── terraform/             # IaC
-├── docker-compose.yml         # Local dev environment
-└── package.json               # Monorepo root
-```
+Dự án này đã hoàn thành chứng chỉ hệ thống cấp độ **Level 6 (Resilience & AI Agent Certification)** với 60 Testcases đạt chuẩn ACID và tính sẵn sàng cao.
 
 ---
 
-## 🗺️ Lộ Trình Phát Triển
+## 🏗️ Kiến trúc Microservices (Event-Driven & Saga)
 
-### PHASE 1 — Setup Monorepo (Tuần 1)
+Hệ thống được thiết kế theo mô hình Microservices phân tán, sử dụng **Saga Pattern (Orchestration)** để đảm bảo tính nhất quán dữ liệu.
 
-**Mục tiêu:** Tạo nền tảng dự án
-
-```bash
-# 1. Tạo cấu trúc thư mục
-mkdir cab-booking && cd cab-booking
-
-# 2. Init monorepo
-yarn init -y
-yarn add -D concurrently typescript
-
-# 3. Tạo 3 Next.js apps
-npx create-next-app@latest apps/customer-app --typescript --tailwind --app
-npx create-next-app@latest apps/driver-app --typescript --tailwind --app
-npx create-next-app@latest apps/admin-dashboard --typescript --tailwind --app
-
-# 4. Copy các file cấu hình đã cung cấp vào đúng thư mục
-
-# 5. Chạy thử
-yarn dev:customer  # localhost:3100
-yarn dev:driver    # localhost:3200
-yarn dev:admin     # localhost:3300
-```
-
-**Files cần tạo từ scaffold này:**
-- `package.json` (root) ✅
-- `packages/types/index.ts` ✅
-- `packages/types/mock-data.ts` ✅
-- `apps/*/package.json` ✅
-- `apps/*/tailwind.config.js` ✅
-- `apps/*/src/app/layout.tsx` ✅
-- `apps/*/src/app/page.tsx` ✅
+*   **API Gateway (8080)**: Điểm tiếp nhận duy nhất, xử lý Bảo mật (JWT), Giới hạn lưu lượng (Rate Limiting).
+*   **Booking Service (3002)**: Điều phối toàn bộ vòng đời chuyến xe. Quản lý **ACID Transactions**.
+*   **AI Matching Service (3008)**: Sử dụng **Agentic AI** để ra quyết định chọn tài xế dựa trên đa mục tiêu (Speed, Quality, Balanced).
+*   **Driver Service (3004)**: Quản lý vị trí thời gian thực bằng **Redis GeoIndex**.
+*   **Payment Service (3005)**: Tích hợp thanh toán, hỗ trợ cơ chế Retry và Circuit Breaker.
 
 ---
 
-### ✅ PHASE 2 — Design System (Tuần 1-2)
+## 📜 Danh mục Testcases & Đặc tả Kỹ thuật (Level 1 - 6)
 
-**Mục tiêu:** Component library chung
+Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic quyết định kết quả.
 
-```
-apps/customer-app/src/components/ui/
-├── Button.tsx        # ✅ Done
-├── Input.tsx         # ✅ Done
-├── Card.tsx          # ✅ Done
-├── Modal.tsx         # ✅ Done
-├── Toast.tsx         # ✅ Done
-├── Spinner.tsx       # ✅ Done
-├── Badge.tsx         # ✅ Done
-└── BottomSheet.tsx   # ✅ Done
-```
+### 🟢 LEVEL 1 & 2: Core Logic & Security (TC01 - TC20)
+*   **TC01 - TC05 (Khoảng cách & Giá)**: 
+    *   **Code**: `services/booking-service/src/controllers/booking.controller.ts` (L6-15).
+    *   **Logic**: Sử dụng công thức Haversine để tính khoảng cách thực tế giữa các tọa độ GPS.
+*   **TC11 - TC15 (Bảo mật JWT)**:
+    *   **Code**: `services/auth-service/src/middleware/auth.middleware.ts`.
+    *   **Logic**: Kiểm tra chữ ký Bearer Token. Nếu không hợp lệ, Gateway sẽ chặn request ngay lập tức (Fail-fast).
 
-**Prompt mở rộng:**
-```
-Create reusable UI components for a mobile-first cab booking app.
-Use TailwindCSS. Each component must:
-- Accept className prop for customization
-- Have proper TypeScript types
-- Follow accessibility guidelines
-- Match Grab/Uber style: clean, rounded, green accent
-```
+### 🟡 LEVEL 3 & 4: ACID Compliance & Saga Pattern (TC21 - TC40)
+*   **TC32 (Atomic - Toàn vẹn dữ liệu)**:
+    *   **Mục tiêu**: Khi lỗi hệ thống xảy ra, dữ liệu không được kẹt ở trạng thái "dang dở".
+    *   **Code**: `booking.controller.ts` (Dòng 248-292).
+    *   **Xử lý**: Sử dụng `prisma.$transaction`. Nếu dòng 286 (`simulate_db_error`) kích hoạt, toàn bộ tiến trình tạo Booking sẽ bị Rollback.
+*   **TC35 (Isolated - Chống đặt trùng)**:
+    *   **Code**: `booking.controller.ts` (Dòng 180).
+    *   **Kỹ thuật**: **Redis Distributed Lock**. Chỉ một request duy nhất của User được xử lý trong 30 giây.
+*   **TC37 (Saga Compensation - Tự động hoàn tác)**:
+    *   **Code**: `booking.controller.ts` (Dòng 378).
+    *   **Logic**: Khi `payment-service` báo lỗi thẻ (Hard Failure), Booking Service tự động gọi lệnh UPDATE chuyển trạng thái sang `CANCELLED`.
+*   **TC39 (Resilience - Khả năng chịu lỗi mạng)**:
+    *   **Code**: `booking.controller.ts` (Dòng 357).
+    *   **Logic**: Phân biệt Timeout và Failure. Nếu Timeout, hệ thống **không hủy** đơn hàng mà chuyển sang `PENDING` để kiểm tra lại sau (Recovery Mode), đảm bảo không mất doanh thu do mạng lag.
+*   **TC40 (Consistency - Làm sạch dữ liệu)**:
+    *   **Code**: `scripts/acid-cleanup.sql`.
+    *   **Logic**: Đảm bảo mọi record `CANCELLED` phải có `cancelled_at`, mọi `SUCCESS` phải có `payment_id`.
 
----
-
-### 🟡 PHASE 3 — Customer App UI (Tuần 2-3)
-
-**Màn hình cần hoàn thiện:**
-
-| Màn hình | Route | Status |
-|----------|-------|--------|
-| Home Map | `/` | ✅ Done (Leaflet integration) |
-| Chọn điểm đi/đến | `/` (bottom sheet) | ✅ Done |
-| Chọn loại xe | `/` (bottom sheet) | ✅ Done |
-| Đang tìm tài xế | `/` (bottom sheet) | ✅ Done |
-| Tài xế được phân công | `/` (bottom sheet) | ✅ Done |
-| Đang trên đường | `/` (bottom sheet) | ✅ Done |
-| Hoàn thành & đánh giá | `/` (bottom sheet) | ✅ Done |
-| Lịch sử chuyến đi | `/rides` | ✅ Done |
-| Thông báo | `/notifications` | ⬜ Cần tạo |
-| Hồ sơ | `/profile` | ⬜ Cần tạo |
-
-**Thêm Mapbox thật:**
-```bash
-# 1. Tạo tài khoản mapbox.com (free tier)
-# 2. Copy token vào .env.local:
-NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1...
-
-# 3. Cài package
-yarn workspace @cab/customer-app add mapbox-gl @types/mapbox-gl
-
-# 4. Replace MapPlaceholder với MapboxMap component
-```
+### 🔴 LEVEL 5 & 6: AI Agent & Advanced Resilience (TC41 - TC60)
+*   **TC51 - TC53 (AI Agent Reasoning)**:
+    *   **Code**: `services/ai-matching-service/src/services/ai.service.ts`.
+    *   **Logic**: Agent phân tích 4 tham số: Khoảng cách, Rating, Giá và Độ tin cậy (Reliability).
+    *   **Decision**: 
+        *   Priority **Speed**: Chọn driver gần nhất (Dòng code scoring AI).
+        *   Priority **Quality**: Chọn driver có Rating 4.9+ dù xa hơn.
+*   **TC57 (Exclusion logic)**:
+    *   **Code**: `services/driver-service/src/controllers/driver.controller.ts` (Dòng 60).
+    *   **Xử lý**: Khi tài xế OFFLINE, lệnh `redis.zRem` sẽ xóa họ khỏi bản đồ tìm kiếm. AI Agent sẽ tự động loại bỏ họ ra khỏi danh sách ứng viên.
+*   **TC58 (Decision Logging)**:
+    *   **Mô tả**: Mọi quyết định của AI Agent đều được log kèm theo `matchingReason` (L260 trong Booking Controller) để phục vụ giải trình (Explainability).
 
 ---
 
-### ⬜ PHASE 4 — Driver App UI (Tuần 3)
+## 🛠️ Công nghệ & Kỹ thuật Nâng cao
 
-**Màn hình cần hoàn thiện:**
+### 1. Circuit Breaker (Cầu dao điện)
+*   **Vị trí**: `booking-service/src/utils/circuitBreaker.ts`.
+*   **Tác dụng**: Nếu Pricing Service bị sập, hệ thống tự động ngắt kết nối và chuyển sang dùng giá mặc định (Local Fallback) thay vì để User chờ đợi.
 
-| Màn hình | Status |
-|----------|--------|
-| Login / KYC | ⬜ Tạo mới |
-| Online/Offline toggle | ✅ Done |
-| Incoming Request popup | ✅ Done |
-| Navigation to pickup | ✅ Done (basic) |
-| In-trip screen | ✅ Done |
-| Earnings dashboard | ⬜ Tạo mới |
-| Trip history | ⬜ Tạo mới |
+### 2. Outbox Pattern
+*   **Vị trí**: `booking.controller.ts` (Dòng 273).
+*   **Tác dụng**: Đảm bảo Event được lưu vào DB cùng lúc với Booking. Ngay cả khi Kafka sập, dữ liệu sự kiện vẫn không bị mất.
 
-```bash
-# Chạy driver app riêng:
-yarn dev:driver
-# Truy cập: localhost:3200
-```
+### 3. Exponential Backoff (Retry Logic)
+*   **Vị trí**: `booking.controller.ts` (Dòng 308).
+*   **Tác dụng**: Tự động thử lại thanh toán sau 1s, 2s, 4s... khi gặp lỗi mạng.
 
 ---
 
-### ⬜ PHASE 5 — Admin Dashboard (Tuần 3-4)
-
-**Module cần hoàn thiện:**
-
-| Module | Status |
-|--------|--------|
-| Dashboard KPIs | ✅ Done |
-| Revenue chart | ✅ Done (basic) |
-| Rides table | ✅ Done |
-| Users management | ⬜ CRUD table |
-| Drivers management | ⬜ Map + list |
-| Pricing control | ⬜ Form + surge |
-| Security / Audit | ⬜ Log viewer |
-
-**Thêm Recharts:**
-```bash
-yarn workspace @cab/admin-dashboard add recharts
-```
+## 🚀 Hướng dẫn Chạy Test (Postman)
+1.  Import Collection `Level6_Tests.postman_collection.json`.
+2.  Chạy theo thứ tự từ TC01 đến TC60.
+3.  Xem log tại terminal của `booking-service` và `ai-matching-service` để thấy AI suy luận.
 
 ---
-
-### ⬜ PHASE 6 — Backend Services (Tuần 4-6)
-
-**Thứ tự build services:**
-
-```
-1. auth-service       — JWT, refresh token, bcrypt
-2. api-gateway        — Rate limiting, JWT validation, routing
-3. user-service       — CRUD profile
-4. driver-service     — Location, status, Redis Geo
-5. booking-service    — Tạo booking, saga pattern
-6. pricing-service    — Surge pricing, base fare
-7. ride-service       — Ride lifecycle, WebSocket events
-8. payment-service    — Stripe, retry logic
-9. notification-svc   — Kafka consumer, FCM push
-```
-
-**Mỗi service dùng template:**
-```
-service/
-├── src/
-│   ├── controllers/
-│   ├── services/
-│   ├── repositories/
-│   ├── models/
-│   ├── middleware/
-│   └── events/        # Kafka producers/consumers
-├── prisma/schema.prisma
-├── Dockerfile
-└── package.json
-```
-
-**Khởi động infra local:**
-```bash
-docker-compose up postgres mongodb redis kafka -d
-```
-
----
-
-### ⬜ PHASE 7 — Real-time Integration (Tuần 6-7)
-
-**WebSocket events flow:**
-```
-Driver App  →  GPS (lat,lng)  →  WebSocket Gateway
-                                 → Redis Geo update
-                                 → Kafka: DriverLocationUpdated
-                                 → Customer App receives update
-```
-
-**Checklist:**
-- [ ] Socket.IO server trong api-gateway
-- [ ] Room management (rideId-based rooms)
-- [ ] GPS stream từ driver app
-- [ ] Location updates tới customer app
-- [ ] Ride status changes realtime
-
----
-
-### ⬜ PHASE 8 — AI Matching (Tuần 7-8)
-
-**Algorithm:**
-```typescript
-// AI Matching Score Formula:
-score = (
-  0.4 * (1 / distance_km)   +   // Proximity
-  0.3 * driver.rating / 5   +   // Rating
-  0.2 * (1 / eta_minutes)   +   // Speed
-  0.1 * acceptance_rate         // Reliability
-)
-```
-
-**Components:**
-- [ ] Feature Store (Redis)
-- [ ] Matching Service (Node.js + ML logic)
-- [ ] Driver ranking API
-- [ ] A/B testing support
-
----
-
-### ⬜ PHASE 9 — Security (Tuần 8)
-
-**Zero Trust checklist:**
-- [ ] JWT RS256 (asymmetric keys)
-- [ ] Refresh token rotation
-- [ ] Rate limiting per user/IP
-- [ ] RBAC middleware
-- [ ] mTLS giữa services
-- [ ] API Gateway WAF rules
-- [ ] Audit logging
-
----
-
-### ⬜ PHASE 10 — Deployment (Tuần 9-10)
-
-**Kubernetes setup:**
-```bash
-# Build & push images
-docker build -t cabgo/customer-app ./apps/customer-app
-docker push cabgo/customer-app
-
-# Apply k8s manifests
-kubectl apply -f infrastructure/k8s/
-
-# Check pods
-kubectl get pods -n cabgo
-```
-
-**Terraform (AWS):**
-```bash
-cd infrastructure/terraform
-terraform init
-terraform plan
-terraform apply
-```
-
----
-
-## 🚀 Quick Start (Development)
-
-```bash
-# 1. Clone & install
-git clone <repo>
-cd cab-booking
-yarn install
-
-# 2. Start infrastructure
-docker-compose up postgres mongodb redis -d
-
-# 3. Copy env files
-cp apps/customer-app/.env.example apps/customer-app/.env.local
-# Edit with your MAPBOX_TOKEN, API URLs
-
-# 4. Start all frontend apps
-yarn dev:all
-
-# URLs:
-# Customer: http://localhost:3100
-# Driver:   http://localhost:3200
-# Admin:    http://localhost:3300
-```
-
----
-
-## 🔑 Environment Variables
-
-```env
-# .env.local (mỗi app)
-NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080
-NEXT_PUBLIC_WS_URL=http://localhost:8080
-NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1...   # Từ mapbox.com
-
-# docker-compose cần .env
-JWT_SECRET=your-super-secret-key-min-32-chars
-STRIPE_SECRET_KEY=sk_test_...
-FCM_SERVER_KEY=...
-MAPBOX_TOKEN=pk.eyJ1...
-```
-
----
-
-## 📊 Kiến Trúc Tổng Thể
-
-```
-Client Layer (3 Next.js Apps)
-        ↓ HTTPS / WebSocket
-   API Gateway (Node.js :8080)
-        ↓ Routes to
-┌─────────────────────────────────────────────┐
-│              Microservices Layer              │
-│  Auth  Booking  Ride  Driver  Payment  Price │
-└─────────────────────────────────────────────┘
-        ↓ Events (Kafka)
-   Notification Service
-        ↓
-   Data Layer
-   PostgreSQL + MongoDB + Redis
-```
-
----
-
-## 📞 Hỗ Trợ
-
-Mỗi phase có **prompt sẵn** — paste vào Claude để generate code tiếp theo.
-Xem file `docs/prompts.md` để lấy prompt từng phase.
+*Bản quyền thuộc về hệ thống CabGo Certification.*

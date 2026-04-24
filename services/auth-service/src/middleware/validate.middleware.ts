@@ -1,11 +1,15 @@
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
 
-// Schema definitions
+// Case 81, 82: Prevent SQLi and XSS patterns via Regex
+const dangerousPatterns = /<script>|OR 1=1|DROP TABLE|--|;|'|"/i;
+
 export const registerSchema = z.object({
   email:    z.string().email('Invalid email format'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  name:     z.string().min(2, 'Name is too short'),
+  name:     z.string()
+    .min(2, 'Name is too short')
+    .refine(val => !dangerousPatterns.test(val), { message: 'Invalid characters in input' }),
   phone:    z.string().optional(),
 });
 

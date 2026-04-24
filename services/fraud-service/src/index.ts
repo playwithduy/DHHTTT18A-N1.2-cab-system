@@ -11,7 +11,10 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
-const MODEL_VERSION = 'v1.0.5-fraud';
+const MODEL_VERSION = process.env.FRAUD_MODEL_VERSION || 'v1.0.5-fraud';
+
+// ── Configurable Fraud Parameters (NOT hardcoded) ──────────────
+const FRAUD_THRESHOLD = parseInt(process.env.FRAUD_AMOUNT_THRESHOLD || '10000000'); // 10M VND default
 
 const fraudCheckSchema = z.object({
   user_id: z.string(),
@@ -25,9 +28,8 @@ app.post(['/', '/fraud', '/check', '/fraud/check'], async (req: Request, res: Re
   try {
     const data = fraudCheckSchema.parse(req.body);
     
-    // Case 43: Fraud detection logic
-    // Logic: amount > 10M VND or specific mock trigger
-    const isFraud = data.amount > 10000000 || (req.body.simulate_fraud === true);
+    // Case 43: Fraud detection logic (threshold configurable via env FRAUD_AMOUNT_THRESHOLD)
+    const isFraud = data.amount > FRAUD_THRESHOLD || (req.body.simulate_fraud === true);
 
     res.json({
       success: true,

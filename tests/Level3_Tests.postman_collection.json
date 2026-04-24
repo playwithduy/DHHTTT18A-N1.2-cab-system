@@ -6,8 +6,112 @@
 	},
 	"item": [
 		{
+			"name": "0. Đăng ký user (Dynamic)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var ts = new Date().getTime();",
+							"pm.collectionVariables.set(\"userEmail\", \"user_lv3_\" + ts + \"@test.com\");"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Register success\", () => { pm.response.to.have.status(201); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"123456\",\n    \"name\": \"User Level 3\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+			}
+		},
+		{
+			"name": "0. Đăng nhập trả JWT (Dynamic)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Login success\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"123456\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+			}
+		},
+		{
+			"name": "0. Driver chuyển trạng thái ONLINE (Setup)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Driver online success\", () => { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"driver_id\": \"DRV_LV3_PM\",\n    \"status\": \"ONLINE\",\n    \"location\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/drivers/status", "host": ["{{baseUrl}}"], "path": ["drivers", "status"] }
+			}
+		},
+		{
 			"name": "21. Booking -> gọi ETA service thành công",
 			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var bookingId = pm.variables.get(\"bookingId\");",
+							"if (bookingId) {",
+							"    pm.sendRequest({",
+							"        url: pm.variables.get(\"baseUrl\") + \"/bookings/\" + bookingId + \"/status\",",
+							"        method: 'PATCH',",
+							"        header: {",
+							"            'Authorization': 'Bearer ' + pm.variables.get(\"accessToken\"),",
+							"            'Content-Type': 'application/json'",
+							"        },",
+							"        body: { mode: 'raw', raw: JSON.stringify({ status: 'CANCELLED' }) }",
+							"    }, function () {});",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				},
 				{
 					"listen": "test",
 					"script": {
@@ -118,7 +222,8 @@
 							"    var bId = pm.variables.get(\"bookingId\");",
 							"    if (jsonData.data) {",
 							"        for(let ev of jsonData.data) {",
-							"             if (ev.payload.includes(bId) && ev.payload.includes('ride_pending_payment')) found = true;",
+							"             var payloadStr = typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload);",
+							"             if (payloadStr.includes(bId) && payloadStr.includes('ride_requested')) found = true;",
 							"        }",
 							"    }",
 							"    pm.expect(found).to.be.true;",
@@ -159,7 +264,7 @@
 							"    var bId = pm.variables.get(\"bookingId\");",
 							"    if (jsonData.data) {",
 							"        for(let ev of jsonData.data) {",
-							"             if (ev.ride_id === bId && ev.type === 'notify_drivers') found = true;",
+							"             if (ev.booking_id === bId && ev.type === 'notify_drivers') found = true;",
 							"        }",
 							"    }",
 							"    pm.expect(found).to.be.true;",
@@ -214,7 +319,7 @@
 							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
 							"var jsonData = pm.response.json();",
 							"pm.test(\"AI Context: reasoning exists\", () => {",
-							"    pm.expect(jsonData.data.matchingReason).to.be.a('string');",
+							"    pm.expect(jsonData.data.matching_reason).to.be.a('string');",
 							"});"
 						],
 						"type": "text/javascript"
@@ -234,7 +339,11 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Gateway healthy\", function () { pm.response.to.have.status(200); });"
+							"pm.test(\"Route to Booking Service success\", function () { ",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.service).to.eql(\"booking-service\");",
+							"    pm.response.to.have.status(200);",
+							"});"
 						],
 						"type": "text/javascript"
 					}
@@ -243,12 +352,32 @@
 			"request": {
 				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
 				"method": "GET",
-				"url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+				"url": { "raw": "{{baseUrl}}/bookings/health-check", "host": ["{{baseUrl}}"], "path": ["bookings", "health-check"] }
 			}
 		},
 		{
 			"name": "30. Retry khi Pricing service timeout",
 			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var bookingId = pm.variables.get(\"bookingId\");",
+							"if (bookingId) {",
+							"    pm.sendRequest({",
+							"        url: pm.variables.get(\"baseUrl\") + \"/bookings/\" + bookingId + \"/status\",",
+							"        method: 'PATCH',",
+							"        header: {",
+							"            'Authorization': 'Bearer ' + pm.variables.get(\"accessToken\"),",
+							"            'Content-Type': 'application/json'",
+							"        },",
+							"        body: { mode: 'raw', raw: JSON.stringify({ status: 'CANCELLED' }) }",
+							"    }, function () {});",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				},
 				{
 					"listen": "test",
 					"script": {

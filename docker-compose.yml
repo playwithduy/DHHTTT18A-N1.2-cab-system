@@ -7,21 +7,34 @@ services:
 
   # ── Infrastructure ──────────────────────────────────────────
 
-  mongodb:
-    image: mongo:7
-    # environment:
-    #   MONGO_INITDB_ROOT_USERNAME: cabgo
-    #   MONGO_INITDB_ROOT_PASSWORD: cabgo_secret
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: cabgo
+      POSTGRES_PASSWORD: cabgo_secret
+      POSTGRES_DB: cabgo
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongo_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "pg_isready -U cabgo"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cabgo.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
 
   redis:
     image: redis:7-alpine
@@ -88,13 +101,13 @@ services:
       - ./services/auth-service/prisma:/app/prisma
     environment:
       PORT: 3001
-      DATABASE_URL: mongodb://mongodb:27017/cabgo_auth?replicaSet=rs0&maxPoolSize=100&connectTimeoutMS=5000
+      DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_auth
       REDIS_URL: redis://:cabgo_redis@redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_IN: 7d
     depends_on:
-      mongodb:  { condition: service_healthy }
+      postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }
 
   booking-service:
@@ -106,7 +119,7 @@ services:
       - ./services/booking-service/prisma:/app/prisma
     environment:
       PORT: 3002
-      DATABASE_URL: mongodb://mongodb:27017/cabgo_booking?replicaSet=rs0&maxPoolSize=100&connectTimeoutMS=5000
+      DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_booking
       KAFKA_BROKERS: kafka:9092
       REDIS_URL: redis://:cabgo_redis@redis:6379
       DRIVER_SERVICE_URL: http://driver-service:3004
@@ -115,7 +128,7 @@ services:
       NOTIFY_SERVICE_URL: http://notification-service:3007
       PAYMENT_SERVICE_URL: http://payment-service:3005
     depends_on:
-      mongodb: { condition: service_healthy }
+      postgres: { condition: service_healthy }
 
   ride-service:
     build: ./services/ride-service
@@ -125,12 +138,9 @@ services:
       - ./services/ride-service/src:/app/src
     environment:
       PORT: 3003
-      DATABASE_URL: mongodb://mongodb:27017/cabgo_ride?replicaSet=rs0&maxPoolSize=100&connectTimeoutMS=5000
       REDIS_URL: redis://:cabgo_redis@redis:6379
       KAFKA_BROKERS: kafka:9092
-      MONGO_URI: mongodb://mongodb:27017?replicaSet=rs0
     depends_on:
-      mongodb:   { condition: service_healthy }
       redis:     { condition: service_healthy }
 
   driver-service:
@@ -142,11 +152,11 @@ services:
       - ./services/driver-service/prisma:/app/prisma
     environment:
       PORT: 3004
-      DATABASE_URL: mongodb://mongodb:27017/cabgo_driver?replicaSet=rs0&maxPoolSize=100&connectTimeoutMS=5000
+      DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_driver
       REDIS_URL: redis://:cabgo_redis@redis:6379
       KAFKA_BROKERS: kafka:9092
     depends_on:
-      mongodb: { condition: service_healthy }
+      postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }
 
   payment-service:
@@ -158,11 +168,11 @@ services:
       - ./services/payment-service/prisma:/app/prisma
     environment:
       PORT: 3005
-      DATABASE_URL: mongodb://mongodb:27017/cabgo_payment?replicaSet=rs0&maxPoolSize=100&connectTimeoutMS=5000
+      DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_payment
       KAFKA_BROKERS: kafka:9092
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
     depends_on:
-      mongodb: { condition: service_healthy }
+      postgres: { condition: service_healthy }
 
   pricing-service:
     build: ./services/pricing-service
@@ -183,11 +193,10 @@ services:
     environment:
       PORT: 3007
       KAFKA_BROKERS: kafka:9092
-      MONGO_URI: mongodb://mongodb:27017?replicaSet=rs0
     volumes:
       - ./services/notification-service/src:/app/src
     depends_on:
-      mongodb: { condition: service_healthy }
+      kafka: { condition: service_started }
 
   ai-matching-service:
     build: ./services/ai-matching-service
@@ -257,7 +266,8 @@ services:
       - /app/apps/admin-dashboard/node_modules
 
 volumes:
-  mongo_data:
+  postgres_data:
+  pgadmin_data:
   redis_data:
 
 networks:

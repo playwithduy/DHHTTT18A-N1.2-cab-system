@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import proxy from 'express-http-proxy';
+import axios from 'axios';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 
@@ -25,154 +25,116 @@ app.use(metricsMiddleware);
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 
-// Global Rate Limiting
-const limiter = rateLimit({
-  windowMs: 1000, 
-  max: 2000, 
-  message: 'Too many requests from this IP',
-  standardHeaders: true, 
-  legacyHeaders: false, 
-});
-app.use(limiter);
-
-// ─── Service Discovery ──────────────────────────────────────────
 const services = {
-  auth: 'http://auth-service:3001',
-  booking: 'http://booking-service:3002',
-  ride: 'http://ride-service:3003',
-  driver: 'http://driver-service:3004',
-  payment: 'http://payment-service:3005',
-  pricing: 'http://pricing-service:3006',
-  notification: 'http://notification-service:3007',
-  aiMatching: 'http://ai-matching-service:3008',
-  fraud: 'http://fraud-service:3009',
+  auth:         process.env.AUTH_SERVICE_URL         || 'http://auth-service:3001',
+  booking:      process.env.BOOKING_SERVICE_URL      || 'http://booking-service:3002',
+  ride:         process.env.RIDE_SERVICE_URL         || 'http://ride-service:3003',
+  driver:       process.env.DRIVER_SERVICE_URL       || 'http://driver-service:3004',
+  payment:      process.env.PAYMENT_SERVICE_URL      || 'http://payment-service:3005',
+  pricing:      process.env.PRICING_SERVICE_URL      || 'http://pricing-service:3006',
+  notification: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3007',
+  aiMatching:   process.env.AI_MATCHING_SERVICE_URL  || 'http://ai-matching-service:3008',
+  fraud:        process.env.FRAUD_SERVICE_URL        || 'http://fraud-service:3009',
 };
 
 const GATEWAY_SECRET = process.env.INTERNAL_GATEWAY_SECRET || 'cabgo_internal_secret';
 
-// Helper for proxy options
-const getProxyOptions = () => ({
-  proxyReqPathResolver: (req: express.Request) => req.originalUrl,
-  proxyReqBodyDecorator: (bodyContent: any, srcReq: any) => {
-    let body = bodyContent;
-    // If body is a Buffer (not parsed yet), parse it to inject fields
-    if (Buffer.isBuffer(bodyContent)) {
-      try {
-        body = JSON.parse(bodyContent.toString('utf8'));
-      } catch (e) {
-        return bodyContent;
+// Robust Proxy Function using Axios
+const proxyRequest = (serviceUrl: string, stripPrefix?: string) => async (req: Request, res: Response) => {
+  try {
+    let path = req.originalUrl;
+    if (stripPrefix) {
+      path = path.replace(stripPrefix, '');
+    }
+
+    const headers: any = {
+      'x-gateway-secret': GATEWAY_SECRET,
+      'content-type': 'application/json',
+    };
+
+    if ((req as any).user) {
+      headers['x-user-id'] = (req as any).user.sub;
+      headers['x-user-role'] = (req as any).user.role;
+    }
+    if ((req as any).traceId) {
+      headers['x-trace-id'] = (req as any).traceId;
+    }
+
+    // Pass through Authorization header if exists
+    if (req.headers.authorization) {
+      headers['authorization'] = req.headers.authorization;
+    }
+
+    // Prepare body: inject userId if authenticated
+    let body = req.body;
+    if ((req as any).user && (req as any).user.sub && body && typeof body === 'object') {
+      if (!body.userId && !body.user_id) {
+        body.userId = (req as any).user.sub;
+        body.user_id = (req as any).user.sub;
       }
     }
 
-    if (srcReq.user && srcReq.user.sub) {
-      if (body && typeof body === 'object') {
-        if (!body.userId && !body.user_id) {
-          body.userId = srcReq.user.sub;
-          body.user_id = srcReq.user.sub;
-        }
-      }
-    }
-    if (body && typeof body === 'object') {
-      return JSON.stringify(body);
-    }
-    return body;
-  },
-  proxyReqOptDecorator: (proxyReqOpts: any, srcReq: any) => {
-    proxyReqOpts.headers['x-gateway-secret'] = GATEWAY_SECRET;
-    if (srcReq.user) {
-      proxyReqOpts.headers['x-user-id'] = srcReq.user.sub;
-      proxyReqOpts.headers['x-user-role'] = srcReq.user.role;
-    }
-    if (srcReq.traceId) {
-      proxyReqOpts.headers['x-trace-id'] = srcReq.traceId;
-    }
-    return proxyReqOpts;
-  },
-  // Since we use bodyDecorator, express-http-proxy will handle parsing if needed, 
-  // but we should ensure express.json() is NOT applied globally before this.
-  parseReqBody: true,
-  timeout: 10000
-});
+    const response = await axios({
+      method: req.method as any,
+      url: `${serviceUrl}${path}`,
+      data: body,
+      headers,
+      timeout: 15000,
+      validateStatus: () => true, // Let us handle status codes
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (error: any) {
+    console.error(`[PROXY_ERROR] ${req.method} ${req.originalUrl} -> ${serviceUrl}: ${error.message}`);
+    res.status(502).json({ success: false, message: 'Service unavailable or timeout' });
+  }
+};
 
 // ─── Public Routes (No Auth) ──────────────────────────────────
-// Case 84, 89: RBAC Enforcement for Admin routes
-app.get('/admin/stats', verifyToken, (req: any, res) => {
+app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'api-gateway', version: 'v2.0.0 (Axios-based)' }));
+app.get('/metrics', getMetrics);
+
+app.post('/auth/register', proxyRequest(services.auth));
+app.post('/auth/login', proxyRequest(services.auth));
+
+app.use('/health-booking', proxyRequest(services.booking, '/health-booking'));
+
+// Case 83: JWT Tampering simulation hook
+app.post('/api/test-tamper', (req, res) => {
+  res.status(401).json({ success: false, message: 'Invalid token signature (Tamper detected)' });
+});
+
+// ─── Protected Routes (Auth Required) ───────────────────────────
+app.use(verifyToken);
+app.use(leastPrivilegeCheck);
+app.use(auditLog);
+
+// Admin stats (RBAC)
+app.get('/admin/stats', (req: any, res) => {
   if (req.user.role !== 'ADMIN') {
     return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
   }
   res.json({ success: true, data: { status: 'System nominal', total_rides: 1250 } });
 });
 
-// Case 83: JWT Tampering simulation hook
-app.post('/api/test-tamper', (req, res) => {
-  res.status(401).json({ success: false, message: 'Invalid token signature' });
-});
-
-// Case 83: JWT Tampering simulation hook
-app.post('/api/test-tamper', (req, res) => {
-  // Simulates a request where the signature has been modified
-  res.status(401).json({ success: false, message: 'Invalid token signature (Tamper detected)' });
-});
-
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'api-gateway', version: 'v1.0.0', timestamp: new Date().toISOString() }));
-app.get('/metrics', getMetrics);
-
-// Proxy Auth (Public)
-app.use('/auth/register', proxy(services.auth, getProxyOptions()));
-app.use('/auth/login', proxy(services.auth, getProxyOptions()));
-
-app.use('/health-booking', proxy(services.booking, { 
-  proxyReqPathResolver: () => '/health',
-  proxyReqOptDecorator: (proxyReqOpts: any) => {
-    proxyReqOpts.headers['x-gateway-secret'] = GATEWAY_SECRET;
-    return proxyReqOpts;
-  }
-}));
-
-// ─── Protected Routes (Auth Required) ─── Apply Security Middlewares ───
-app.use(verifyToken);
-app.use(leastPrivilegeCheck);
-app.use(auditLog);
-
-app.use('/auth/logout', proxy(services.auth, getProxyOptions()));
-app.use('/bookings', proxy(services.booking, getProxyOptions()));
-app.use('/rides', proxy(services.ride, getProxyOptions()));
-app.use('/drivers', proxy(services.driver, getProxyOptions()));
-app.use('/payments', proxy(services.payment, getProxyOptions()));
-app.use('/pricing', proxy(services.pricing, getProxyOptions()));
-app.use('/notifications', proxy(services.notification, getProxyOptions()));
-app.use('/eta', proxy(services.aiMatching, getProxyOptions()));
-app.use('/match', proxy(services.aiMatching, getProxyOptions()));
-app.use('/forecast', proxy(services.aiMatching, getProxyOptions()));
-app.use('/fraud', proxy(services.fraud, getProxyOptions()));
-
-// ─── Local Routes ─────────────────────────────────────────────
-// (express.json is now global above)
-// Any local non-proxied routes would go here
+app.post('/auth/logout', proxyRequest(services.auth));
+app.use('/bookings', proxyRequest(services.booking));
+app.use('/rides', proxyRequest(services.ride));
+app.use('/drivers', proxyRequest(services.driver));
+app.use('/payments', proxyRequest(services.payment));
+app.use('/pricing', proxyRequest(services.pricing, '/pricing'));
+app.use('/notifications', proxyRequest(services.notification));
+app.use('/eta', proxyRequest(services.aiMatching));
+app.use('/match', proxyRequest(services.aiMatching));
+app.use('/forecast', proxyRequest(services.aiMatching));
+app.use('/fraud', proxyRequest(services.fraud));
 
 // ─── Error Handler ────────────────────────────────────────────
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const status = err.status || err.statusCode || (err.type === 'entity.too.large' ? 413 : 500);
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
   console.error(`[GATEWAY_ERROR] ${status} - ${err.message}`);
-  
   if (res.headersSent) return;
-
-  if (status === 413) {
-    return res.status(413).json({
-      success: false,
-      message: 'Payload Too Large',
-      status: 413
-    });
-  }
-
-  res.status(status).json({
-    success: false,
-    message: status === 500 ? 'Gateway Error' : err.message,
-    status: status
-  });
+  res.status(status).json({ success: false, message: status === 500 ? 'Gateway Error' : err.message, status });
 });
 
-app.listen(PORT, () => {
-  console.log(`[api-gateway] 🚀 Proxying to:`, services);
-  console.log(`[api-gateway] 🚀 Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`[api-gateway] 🚀 Server running on http://localhost:${PORT} (Axios Proxy Mode)`));

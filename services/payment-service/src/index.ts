@@ -131,13 +131,14 @@ async function startConsumer() {
 
         // Fetch Stripe customer ID if exists
         const user = await prisma.user.findUnique({ where: { id: customerId }, select: { stripeCustomerId: true } });
-        await processPayment(bookingId, fare.total, user?.stripeCustomerId);
+        await processPayment(bookingId, fare.total, user?.stripeCustomerId || undefined);
       },
     });
 
     console.log('[payment-service] Consumer running, waiting for ride.completed events...');
   } catch (err: any) {
-    console.warn('[payment-service] Kafka connect skipped (dev/mock mode):', err.message);
+    console.error('[payment-service] Kafka connect skipped (dev/mock mode):', err.message);
+    // DO NOT process.exit(1) here so the HTTP API can still work
   }
 }
 
@@ -178,6 +179,9 @@ app.post('/payments', async (req: Request, res: Response) => {
     return; // Will timeout
   }
 
+  // Simulate Network Latency (Always delay to show microservices flow)
+  await new Promise(r => setTimeout(r, 800));
+
   if (simulate_failure === true) {
     console.log(`[payment] Simulated failure for booking ${bookingId}`);
     return res.status(400).json({ success: false, message: 'Simulated payment failure' });
@@ -190,24 +194,54 @@ app.post('/payments', async (req: Request, res: Response) => {
       return res.json({ success: true, data: existing, message: 'Idempotency hit' });
     }
 
-    // 2. Process (Mock Stripe for speed in Saga test, but using processPayment logic)
-    // In a real saga, we might authorized first. Here we assume immediate success for the flow.
-    const rawCardNumber = req.body.cardNumber || '4111222233334444';
-    const encryptedCard = encrypt(rawCardNumber);
+    // Use provided card number or default to empty if not testing
+    const rawCardNumber = req.body.cardNumber;
+    if (!rawCardNumber && req.body.paymentMethod === 'CARD') {
+      return res.status(400).json({ success: false, message: 'Card number is required' });
+    }
+    const safeCardNumber = rawCardNumber || 'CASH_OR_WALLET_TX';
+    const encryptedCard = encrypt(safeCardNumber);
     
+    // Simulate Network Latency
+    await new Promise(r => setTimeout(r, 800));
+
+    let stripeIntentId = `pi_${Math.random().toString(36).substr(2, 15)}`;
+    let status = 'SUCCESS';
+    let errorMessage = null;
+
+    // Simulation Triggers
+    if (rawCardNumber === 'declined') {
+      return res.status(402).json({ 
+        success: false, 
+        message: 'Your card was declined. (Simulated Error)',
+        code: 'card_declined'
+      });
+    }
+    if (rawCardNumber === 'expired') {
+      return res.status(402).json({ 
+        success: false, 
+        message: 'Your card has expired. (Simulated Error)',
+        code: 'expired_card'
+      });
+    }
+
     const payment = await prisma.payment.create({
       data: {
         bookingId,
         amount,
         currency: 'VND',
-        status: 'SUCCESS',
-        stripeIntentId: `mock_${Math.random().toString(36).substr(2, 9)}`,
+        status: status as any,
+        stripeIntentId,
         paidAt: new Date(),
-        failureReason: encryptedCard // Reusing field for demo purposes as card number
+        failureReason: encryptedCard
       }
     });
 
-    res.status(201).json({ success: true, data: payment });
+    res.status(201).json({ 
+      success: true, 
+      message: 'Payment processed successfully (Simulated)',
+      data: payment 
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

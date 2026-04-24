@@ -6,6 +6,90 @@
 	},
 	"item": [
 		{
+			"name": "0. Đăng ký user (Dynamic)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var ts = new Date().getTime();",
+							"pm.collectionVariables.set(\"userEmail\", \"user_lv4_\" + ts + \"@test.com\");"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Register success\", () => { pm.response.to.have.status(201); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"123456\",\n    \"name\": \"User Level 4\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+			}
+		},
+		{
+			"name": "0. Đăng nhập trả JWT (Dynamic)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Login success\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"123456\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+			}
+		},
+		{
+			"name": "0. Driver ONLINE (Setup)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Driver online success\", () => { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"method": "POST",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"driver_id\": \"DRV_LV4_PM\",\n    \"status\": \"ONLINE\",\n    \"location\": {\"lat\": 10.76, \"lng\": 106.66}\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/drivers/status", "host": ["{{baseUrl}}"], "path": ["drivers", "status"] }
+			}
+		},
+		{
 			"name": "31. Transaction tạo booking thành công",
 			"event": [
 				{
@@ -106,9 +190,9 @@
 							"pm.test(\"Fail-Fast: Code is not 5xx\", () => { pm.expect(pm.response.code).to.be.below(500); });",
 							"pm.test(\"Returns 400 Bad Request\", () => { pm.response.to.have.status(400); });",
 							"var jsonData = pm.response.json();",
-							"pm.test(\"Booking marked as FAILED\", () => {",
+							"pm.test(\"Booking marked as CANCELLED\", () => {",
 							"    pm.expect(jsonData.success).to.be.false;",
-							"    pm.expect(jsonData.data.status).to.eql(\"FAILED\");",
+							"    pm.expect(jsonData.data.status).to.eql(\"CANCELLED\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -288,9 +372,9 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Booking record is marked FAILED\", () => {",
+							"pm.test(\"Booking record is marked CANCELLED\", () => {",
 							"    pm.response.to.have.status(200);",
-							"    pm.expect(pm.response.json().data.status).to.eql(\"FAILED\");",
+							"    pm.expect(pm.response.json().data.status).to.eql(\"CANCELLED\");",
 							"});"
 						],
 						"type": "text/javascript"
@@ -332,6 +416,66 @@
 			}
 		},
 		{
+			"name": "38.5 Register fresh user for Resilience Test",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var ts = new Date().getTime();",
+							"pm.collectionVariables.set(\"resilienceUserEmail\", \"user_resilience_\" + ts + \"@test.com\");"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Register success\", () => { pm.response.to.have.status(201); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{resilienceUserEmail}}\",\n    \"password\": \"123456\",\n    \"name\": \"Resilience User\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+			}
+		},
+		{
+			"name": "38.6 Login fresh user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Login success\", () => { pm.response.to.have.status(200); });",
+							"var jsonData = pm.response.json();",
+							"pm.collectionVariables.set(\"resilienceAccessToken\", jsonData.data.access_token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"{{resilienceUserEmail}}\",\n    \"password\": \"123456\"\n}",
+					"options": { "raw": { "language": "json" } }
+				},
+				"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+			}
+		},
+		{
 			"name": "39. Partial failure (network timeout handling)",
 			"event": [
 				{
@@ -349,7 +493,7 @@
 				}
 			],
 			"request": {
-				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+				"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{resilienceAccessToken}}", "type": "string" }] },
 				"method": "POST",
 				"header": [
 					{ "key": "x-idempotency-key", "value": "timeout-39-{{$randomInt}}" }

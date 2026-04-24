@@ -1,6 +1,7 @@
 const axios = require('axios');
 
 const baseUrl = 'http://localhost:8080';
+const ts = Date.now();
 
 async function request(method, path, body = null, token = null) {
     try {
@@ -8,7 +9,8 @@ async function request(method, path, body = null, token = null) {
             method,
             url: `${baseUrl}${path}`,
             data: body,
-            headers: token ? { Authorization: `Bearer ${token}` } : {}
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            validateStatus: () => true
         });
         return { status: res.status, data: res.data };
     } catch (err) {
@@ -17,18 +19,27 @@ async function request(method, path, body = null, token = null) {
 }
 
 async function runTests() {
-    console.log('--- CabGo Level 3 Verification ---');
+    console.log('--- CabGo Level 3 Verification (Dynamic) ---');
     let token, userId;
 
-    console.log('\n[Setup] Logging in...');
-    const loginRes = await request('POST', '/auth/login', { email: 'user@test.com', password: '123456' });
+    console.log('\n[Setup] Registering & Logging in...');
+    const userEmail = `user_lv3_${ts}@test.com`;
+    await request('POST', '/auth/register', { email: userEmail, password: 'password', name: 'User LV3' });
+    const loginRes = await request('POST', '/auth/login', { email: userEmail, password: 'password' });
+    
     if (loginRes.status !== 200) {
         console.error('Setup failed: Login error.');
         return;
     }
     token = loginRes.data.data.access_token;
-    userId = loginRes.data.data.user.id;
-    const authHeader = { Authorization: `Bearer ${token}` };
+    userId = loginRes.data.data.user_id || loginRes.data.data.user.id;
+    
+    console.log('[Setup] Setting a Driver ONLINE...');
+    await request('POST', '/drivers/status', { 
+        driver_id: 'DRV_LV3', status: 'ONLINE', 
+        location: { lat: 10.76, lng: 106.66 } 
+    }, token);
+    
     console.log('✔ Setup Success.');
 
     // 21 & 22. Testing Booking integration with ETA and Pricing
@@ -40,20 +51,20 @@ async function runTests() {
     }, token);
     
     if (bookingRes.status === 201) {
-        console.log('✔ Success. Booking ID:', bookingRes.data.data.bookingId || bookingRes.data.data.booking_id);
-        console.log('✔ Price from Pricing Service:', bookingRes.data.data.fare.total);
+        const bData = bookingRes.data.data;
+        console.log('✔ Success. Booking ID:', bData.id || bData.booking_id);
+        console.log('✔ Price from Pricing Service:', bData.price);
+        console.log('✔ Driver ID matched:', bData.driver_id);
     } else {
         console.error('❌ Failed:', bookingRes.status, bookingRes.data);
     }
 
     // 23 & 28. Checking AI Agent decision making
     console.log('\n23 & 28. Checking AI Agent decision making...');
-    // We expect the booking to go through matching
-    if (bookingRes.data.data.matching_analysis) {
-        console.log('✔ AI Reasoning:', bookingRes.data.data.matching_analysis.reasoning);
-        console.log('✔ Driver ID matched:', bookingRes.data.data.matching_analysis.driverId);
+    if (bookingRes.data.data && bookingRes.data.data.matching_reason) {
+        console.log('✔ AI Reasoning:', bookingRes.data.data.matching_reason);
     } else {
-        console.log('✔ Logic: Agent decisions are logged in audit_logs/matching_events.');
+        console.log('✔ Note: Agent reasoning not found in direct response, check logs.');
     }
 
     // 30. Testing Retry Logic (Pricing timeout simulation)
@@ -71,7 +82,7 @@ async function runTests() {
     console.log(`✔ Request completed in ${duration} ms`);
     if (retryRes.status === 201) {
         console.log('✔ Success. Booking created even with pricing timeout (Fallback used).');
-        console.log('✔ Price:', retryRes.data.data.fare.total);
+        console.log('✔ Price:', retryRes.data.data.price);
     } else {
         console.log('❌ Failed:', retryRes.status, retryRes.data);
     }
@@ -79,4 +90,4 @@ async function runTests() {
     console.log('\nLevel 3 Verification Complete.');
 }
 
-runTests();
+runTests().catch(err => console.error('Verification Error:', err.message));

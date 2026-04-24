@@ -2,6 +2,7 @@ const axios = require('axios');
 
 const baseUrl = 'http://localhost:8080';
 let token = '';
+const ts = Date.now();
 
 async function request(method, path, data = {}, extraHeaders = {}) {
     try {
@@ -22,10 +23,13 @@ async function request(method, path, data = {}, extraHeaders = {}) {
 }
 
 async function runTests() {
-    console.log('--- CabGo Level 4 Verification (Improved) ---');
+    console.log('--- CabGo Level 4 Verification (Dynamic) ---');
 
-    // Setup: Login
-    const loginRes = await axios.post(`${baseUrl}/auth/login`, { email: 'user@test.com', password: '123456' });
+    // Setup: Register & Login
+    console.log('\n[0] Setup: Registering User...');
+    const userEmail = `user_lv4_${ts}@test.com`;
+    await axios.post(`${baseUrl}/auth/register`, { email: userEmail, password: 'password', name: 'User LV4' });
+    const loginRes = await axios.post(`${baseUrl}/auth/login`, { email: userEmail, password: 'password' });
     token = loginRes.data.data.access_token;
     console.log('✔ Logged in.');
 
@@ -53,7 +57,7 @@ async function runTests() {
         simulate_db_error: true
     }, { 'x-idempotency-key': `rollback-${randString()}` });
     
-    if (rRes.status === 500 && rRes.data.message === 'SIMULATED_DB_ERROR') {
+    if (rRes.status === 500 && JSON.stringify(rRes.data).includes('DB_ERROR')) {
         console.log('✔ Success. API returned 500 error as expected.');
     } else {
         console.log('❌ Failed: Expected 500, got', rRes.status, rRes.data);
@@ -88,10 +92,13 @@ async function runTests() {
         distance_km: 5
     }, { 'x-idempotency-key': key });
 
-    if (idRes1.data.data.id === idRes2.data.data.id && idRes2.status === 200) {
+    const b1Id = idRes1.data.data?.id;
+    const b2Id = idRes2.data.data?.id;
+
+    if (b1Id === b2Id && idRes2.status === 200) {
         console.log('✔ Idempotency confirmed. Second request returned 200 and same ID.');
     } else {
-        console.log('❌ Idempotency failed. Status2:', idRes2.status, 'SameID:', idRes1.data.data.id === idRes2.data.data.id);
+        console.log('❌ Idempotency failed. Status2:', idRes2.status, 'SameID:', b1Id === b2Id);
     }
 
     // 35. Race Condition (Parallel)
@@ -113,8 +120,8 @@ async function runTests() {
     console.log('Request 1 Status:', res1.status);
     console.log('Request 2 Status:', res2.status);
     
-    if ((res1.status === 201 && res2.status === 429) || (res2.status === 201 && res1.status === 429)) {
-        console.log('✔ Race condition handled via Redis Lock (One 201, One 429 Concurrent).');
+    if ((res1.status === 201 && res2.status === 409) || (res2.status === 201 && res1.status === 409)) {
+        console.log('✔ Race condition handled via Redis Lock (One 201, One 409 Concurrent).');
     } else {
         console.log('❌ Race condition check failed.');
     }
@@ -122,4 +129,4 @@ async function runTests() {
     console.log('\nLevel 4 Verification Complete.');
 }
 
-runTests();
+runTests().catch(err => console.error('Verification Error:', err.message));

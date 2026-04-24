@@ -6,18 +6,22 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Driver {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  id            String   @id @default(uuid())
   userId        String   @unique @map("user_id")
   vehicleModel  String?  @map("vehicle_model")
   vehiclePlate  String?  @map("vehicle_plate")
   status        String   @default("OFFLINE")
   currentLat    Float?   @map("current_lat")
   currentLng    Float?   @map("current_lng")
+  rating        Float    @default(4.5)
+  acceptanceRate Float   @default(0.9) @map("acceptance_rate")
+  totalRides    Int      @default(0) @map("total_rides")
+  vehicleType   String   @default("car") @map("vehicle_type")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("drivers")

@@ -24,10 +24,10 @@ const startKafka = async () => {
     eachMessage: async ({ topic, message }) => {
       const data = JSON.parse(message.value?.toString() || '{}');
       if (topic === 'ride_events' && data.event_type === 'ride_requested') {
-        console.log(`[notification] New ride request! Notifying nearby drivers for ride ${data.ride_id}...`);
+        console.log(`[notification] New ride request! Notifying nearby drivers for ride ${data.booking_id}...`);
         logs.unshift({ type: 'notify_drivers', ...data, timestamp: new Date().toISOString() });
       } else if (topic === 'ride_events' && data.event_type === 'ride_accepted') {
-        console.log(`[notification] Ride ${data.ride_id} ACCEPTED by driver ${data.driver_id}. Notifying user...`);
+        console.log(`[notification] Ride ${data.booking_id} ACCEPTED by driver ${data.driver_id}. Notifying user...`);
         logs.unshift({ type: 'notify_user', ...data, timestamp: new Date().toISOString() });
       } else if (topic === 'driver.assigned') {
         console.log(`[notification] Driver ${data.driverId} assigned to ride ${data.bookingId}. Notifying user...`);

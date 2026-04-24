@@ -10,23 +10,27 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
-const MODEL_VERSION = 'v2.1.0-surge';
+const MODEL_VERSION = process.env.PRICING_MODEL_VERSION || 'v2.1.0-surge';
+
+// ── Configurable Pricing Parameters (read from env, NOT hardcoded) ─────
+const MAX_SURGE_CAP = parseFloat(process.env.MAX_SURGE_CAP || '3.0');
+const MAX_DISTANCE_KM = parseInt(process.env.MAX_DISTANCE_KM || '1000');
 
 const VEHICLE_PRICING: Record<string, { baseFare: number; perKmRate: number }> = {
-  bike:    { baseFare: 13000, perKmRate: 4500  },
-  car:     { baseFare: 28000, perKmRate: 11000 },
-  premium: { baseFare: 35000, perKmRate: 14500 },
-  xl:      { baseFare: 32000, perKmRate: 13000 },
+  bike:    { baseFare: parseInt(process.env.BIKE_BASE_FARE || '13000'),    perKmRate: parseInt(process.env.BIKE_PER_KM || '4500')  },
+  car:     { baseFare: parseInt(process.env.CAR_BASE_FARE || '28000'),     perKmRate: parseInt(process.env.CAR_PER_KM || '11000') },
+  premium: { baseFare: parseInt(process.env.PREMIUM_BASE_FARE || '35000'), perKmRate: parseInt(process.env.PREMIUM_PER_KM || '14500') },
+  xl:      { baseFare: parseInt(process.env.XL_BASE_FARE || '32000'),      perKmRate: parseInt(process.env.XL_PER_KM || '13000') },
 };
 
 function calculateFare(distance_km: number, demand_index: number, supply_index: number, vehicle_type: string) {
   const demand = Math.max(0, demand_index);
   const supply = Math.max(0.1, supply_index);
   
-  // Case 42: Pricing model surge logic
+  // Case 42: Pricing model surge logic (MAX_SURGE_CAP configurable via env)
   let surge = demand / supply;
-  if (surge < 1.0) surge = 1.0;
-  if (surge > 3.0) surge = 3.0; // Max surge cap for Case 42
+  if (surge < 1.0 || isNaN(surge)) surge = 1.0;
+  if (surge > MAX_SURGE_CAP) surge = MAX_SURGE_CAP; // Configurable max surge cap
 
   const pricing = VEHICLE_PRICING[vehicle_type] ?? VEHICLE_PRICING['car'];
   const { baseFare, perKmRate } = pricing;
@@ -41,7 +45,7 @@ function calculateFare(distance_km: number, demand_index: number, supply_index: 
   return { fare: Math.round(fare), surge, baseFare, perKmRate };
 }
 
-app.post(['/price', '/pricing'], (req, res) => {
+app.post(['/', '/price', '/pricing'], (req, res) => {
   const { distance_km, demand_index = 1.0, supply_index = 1.0, vehicle_type = 'car', simulate_timeout = false } = req.body;
   
   if (simulate_timeout === true) {
@@ -51,8 +55,8 @@ app.post(['/price', '/pricing'], (req, res) => {
 
   if (distance_km === undefined) return res.status(400).json({ success: false, message: 'distance_km is required' });
 
-  // Case 50: Abnormal Input (distance > 1000km)
-  if (distance_km > 1000) {
+  // Case 50: Abnormal Input (distance > configurable max)
+  if (distance_km > MAX_DISTANCE_KM) {
     return res.status(400).json({ success: false, message: 'Distance exceeds operational limit', modelVersion: MODEL_VERSION });
   }
 
