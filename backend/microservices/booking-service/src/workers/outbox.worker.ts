@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Kafka } from 'kafkajs';
+import axios from 'axios';
 
 const prisma = new PrismaClient();
 const KAFKA_BROKERS = process.env.KAFKA_BROKERS || 'kafka:9092';

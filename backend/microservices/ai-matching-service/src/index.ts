@@ -133,8 +133,27 @@ export class AIMatchingService {
 
     const latencyMs = Date.now() - startTime;
     if (!decision) {
-      console.log(`\x1b[34m[AI-MATCH]\x1b[0m \x1b[31mFAILED\x1b[0m to match any driver.`);
-      return { success: false, message: 'Matching failed' };
+      console.log(`\x1b[34m[AI-MATCH]\x1b[0m \x1b[31mFAILED\x1b[0m to match any driver. Redis is empty.`);
+      const fallbackEta = Math.max(1, Math.ceil((rideData.distance_km || AI_CONFIG.DEFAULT_DISTANCE_KM) * AI_CONFIG.AVG_SPEED_FACTOR));
+      return {
+        success: true,
+        driverId: null,
+        score: 0,
+        eta: fallbackEta,
+        reasoning: `No drivers found in search radius. ETA=${fallbackEta}min`,
+        mcp_context: {
+          pickup: rideData.pickup,
+          vehicle_type: vehicleType,
+          available_drivers: 0,
+          traffic_condition: 'NORMAL',
+          eta: fallbackEta,
+          method: 'REAL_DATA_EMPTY_REDIS',
+        },
+        drivers: [],
+        topDrivers: [],
+        modelVersion: MODEL_VERSION,
+        latencyMs
+      };
     }
 
     console.log(`\x1b[34m[AI-MATCH]\x1b[0m \x1b[32mSUCCESS\x1b[0m: Winner=${decision.driverId} (Score: ${decision.metrics.score})`);
@@ -145,7 +164,8 @@ export class AIMatchingService {
       score:    decision.metrics.score,
       eta:      decision.metrics.eta,
       reasoning: decision.reasoning,
-      mcp_context: decision.mcpContext, // Added this
+      traceId:   decision.traceId,
+      mcp_context: decision.mcpContext,
       drivers:   decision.topDrivers,
       modelVersion: MODEL_VERSION,
       latencyMs

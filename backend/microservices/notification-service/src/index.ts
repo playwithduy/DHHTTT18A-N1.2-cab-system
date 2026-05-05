@@ -25,7 +25,7 @@ const startKafka = async () => {
       await consumer.connect();
       kafkaStatus = 'connected';
       console.log('\x1b[32m%s\x1b[0m', '[notification-service] Kafka Connected Successfully');
-      await consumer.subscribe({ topics: ['ride_events', 'driver.assigned'], fromBeginning: true });
+      await consumer.subscribe({ topics: ['ride_events', 'driver.assigned'], fromBeginning: false });
       await consumer.run({
         eachMessage: async ({ topic, message }) => {
           try {

@@ -41,7 +41,7 @@ Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic qu
     *   **Logic**: Khi `payment-service` báo lỗi thẻ (Hard Failure), Booking Service tự động gọi lệnh UPDATE chuyển trạng thái sang `CANCELLED`.
 *   **TC39 (Resilience - Khả năng chịu lỗi mạng)**:
     *   **Code**: `booking.controller.ts` (Dòng 357).
-    *   **Logic**: Phân biệt Timeout và Failure. Nếu Timeout, hệ thống **không hủy** đơn hàng mà chuyển sang `PENDING` để kiểm tra lại sau (Recovery Mode), đảm bảo không mất doanh thu do mạng lag.
+    *   **Logic**: Phân biệt Timeout và Failure. Để đảm bảo tính nhất quán tuyệt đối (Strong Consistency), nếu gặp Timeout, hệ thống thực hiện **Saga Rollback** chuyển trạng thái về `CANCELLED`, đảm bảo không có giao dịch dở dang (Inconsistent State). Khóa Redis được giải phóng ngay lập tức.
 *   **TC40 (Consistency - Làm sạch dữ liệu)**:
     *   **Code**: `scripts/acid-cleanup.sql`.
     *   **Logic**: Đảm bảo mọi record `CANCELLED` phải có `cancelled_at`, mọi `SUCCESS` phải có `payment_id`.
@@ -61,7 +61,7 @@ Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic qu
     *   **Code**: `backend/microservices/driver-service/src/controllers/driver.controller.ts` (Dòng 60).
     *   **Xử lý**: Khi tài xế OFFLINE, lệnh `redis.zRem` sẽ xóa họ khỏi bản đồ tìm kiếm. AI Agent sẽ tự động loại bỏ họ ra khỏi danh sách ứng viên.
 *   **TC58 (Decision Logging)**:
-    *   **Mô tả**: Mọi quyết định của AI Agent đều được log kèm theo `matchingReason` (L260 trong Booking Controller) để phục vụ giải trình (Explainability).
+    *   **Mô tả**: Mọi quyết định của AI Agent đều được log đầy đủ kèm theo `traceId` (định danh duy nhất) và `reasoning` chi tiết để phục vụ giải trình (Explainability) và truy vết lỗi xuyên suốt các Microservices.
 
 ---
 
