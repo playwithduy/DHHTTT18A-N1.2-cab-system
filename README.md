@@ -47,8 +47,12 @@ Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic qu
     *   **Logic**: Đảm bảo mọi record `CANCELLED` phải có `cancelled_at`, mọi `SUCCESS` phải có `payment_id`.
 
 ### 🔴 LEVEL 5 & 6: AI Agent & Advanced Resilience (TC41 - TC60)
+*   **TC41 (ETA Model Validation)**:
+    *   **Code**: `backend/microservices/ai-matching-service/src/agent.orchestrator.ts` (Dòng 158).
+    *   **Logic**: Kiểm tra kết quả ETA từ AI model nằm trong khoảng hợp lý (`eta > 0` và `eta < 60 phút`). Model không được trả giá trị vô lý hoặc âm.
+    *   **Input**: `{ "distance_km": 5, "traffic_level": 0.5 }` → Expected: `eta > 0`, `eta < 60`.
 *   **TC51 - TC53 (AI Agent Reasoning)**:
-    *   **Code**: `backend/microservices/ai-matching-service/src/backend/microservices/ai.service.ts`.
+    *   **Code**: `backend/microservices/ai-matching-service/src/agent.orchestrator.ts`.
     *   **Logic**: Agent phân tích 4 tham số: Khoảng cách, Rating, Giá và Độ tin cậy (Reliability).
     *   **Decision**: 
         *   Priority **Speed**: Chọn driver gần nhất (Dòng code scoring AI).

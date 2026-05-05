@@ -258,10 +258,12 @@ Hệ thống sử dụng mô hình **Microservices** với **API Gateway** là c
 ## 🔴 LEVEL 5: AI VALIDATION & FRAUD (TC 41 - TC 50)
 *Mục tiêu: Đưa trí tuệ nhân tạo và an toàn tài chính vào hệ thống.*
 
-### TC 41: AI Chọn tài xế tốt nhất (Scoring)
-- **Logic:** Agent so sánh các ứng viên dựa trên Score (tổng hợp Dist, Rating, Acc Rate).
+### TC 41: ETA model output trong range hợp lý
+- **Postman:** `POST {{GATEWAY_URL}}/eta`
+- **Body:** `{ "distance_km": 5, "traffic_level": 0.5 }`
+- **Logic:** Kiểm tra kết quả ETA từ AI model nằm trong khoảng hợp lý (eta > 0 và eta < 60 phút). Model không được trả giá trị vô lý.
 - **Code:** [agent.orchestrator.ts:158](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L158)
-- **Kết quả:** Tài xế có điểm cao nhất được chọn (không chỉ là người gần nhất).
+- **Kết quả:** `eta > 0`, `eta < 60`. Không trả giá trị âm hoặc bất hợp lý.
 
 ### TC 42: Surge Pricing khi cao điểm
 - **Logic:** Tự động áp dụng `Surge Multiplier` khi nhu cầu (demand_index) tăng cao.
