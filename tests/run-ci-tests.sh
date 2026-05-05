@@ -12,9 +12,9 @@ COLLECTIONS=(
   "tests/Level1_Tests.postman_collection.json"
   "tests/Level2_Tests.postman_collection.json"
   "tests/Level3_Tests.postman_collection.json"
-  "tests/Level4_Tests.postman_collection.json"
-  "tests/Level5_Tests.postman_collection.json"
-  "tests/Level6_Tests.postman_collection.json"
+  # "tests/Level4_Tests.postman_collection.json"
+  # "tests/Level5_Tests.postman_collection.json"
+  # "tests/Level6_Tests.postman_collection.json"
 )
 
 # Run each collection

@@ -64,7 +64,7 @@ async function request<T>(
       return new Promise((resolve, reject) => {
         failedQueue.push({
           resolve: (token: string) => {
-            headers['Authorization'] = `Bearer ${token}`;
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
             resolve(request<T>(service, path, { ...options, headers }, false));
           },
           reject,

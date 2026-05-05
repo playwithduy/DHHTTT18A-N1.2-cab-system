@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #FACC15; /* Premium Yellow */
+  --primary-dark: #EAB308;
+  --secondary: #0f172a;
+  --accent: #FACC15;
+  --background: #020617; /* Dark Mode for Drivers */
+  --foreground: #f8fafc;
+  --iphone-bezel: #090909;
+  --iphone-radius: 55px;
+  --iphone-screen-radius: 46px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+  background: #020617;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- iPhone 16 Pro Frame --- */
+.device-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px 0;
+  background: #0f172a;
+}
+
+.iphone-16 {
+  position: relative;
+  width: 393px;
+  height: 760px;
+  background: var(--iphone-bezel);
+  border-radius: var(--iphone-radius);
+  padding: 12px;
+  box-shadow: 
+    0 0 0 2px #333,
+    0 0 0 4px #1a1a1a,
+    0 40px 100px rgba(0,0,0,0.5),
+    inset 0 0 2px 2px rgba(255,255,255,0.05);
+  z-index: 10;
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #020617;
+  border-radius: var(--iphone-screen-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dynamic-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 32px;
+  background: black;
+  border-radius: 20px;
+  z-index: 1000;
+}
+
+/* Glassmorphism Dark */
+.glass-dark {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Premium Shadows */
+.shadow-premium {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.4), 0 0 40px rgba(250, 204, 21, 0.2);
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.8s ease-in-out forwards;
+}
+
+@keyframes loadingBar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-loading-bar {
+  animation: loadingBar 2s infinite ease-in-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 0px; }
+
+@layer utilities {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 24px); }
+  .safe-top    { padding-top:    env(safe-area-inset-top,    44px); }
+}
+
+/* Leaflet Fixes */
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}

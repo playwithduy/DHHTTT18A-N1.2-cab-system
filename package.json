@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "frontend/*",
+    "backend/api-gateway",
+    "backend/microservices/*",
     "packages/*"
   ],
   "scripts": {
@@ -14,15 +16,13 @@
     "build:all": "yarn workspaces run build",
     "lint": "yarn workspaces run lint",
     "type-check": "yarn workspaces run type-check",
-    "test:lv1": "powershell -ExecutionPolicy Bypass -File tests/curl_level1.ps1",
-    "test:lv1:bash": "bash tests/level1_curl.sh",
-    "test:level1_curl.sh": "bash tests/level1_curl.sh",
-    "test:level1_curl.ps1": "powershell -ExecutionPolicy Bypass -File tests/level1_curl.ps1",
-    "test:level1": "node tests/verify_lv1.js",
-    "test:lv1:js": "node tests/verify_lv1.js",
-    "test:lv2": "powershell -ExecutionPolicy Bypass -File tests/curl_level2.ps1",
-    "test:lv2:bash": "bash tests/curl_level2.sh",
-    "test:lv2:js": "node tests/level2.js"
+    "test:lv1": "node tests/verify_lv1.js",
+    "test:lv2": "node tests/verify_lv2.js",
+    "test:lv3": "node tests/verify_lv3.js",
+    "test:lv4": "node tests/verify_lv4.js",
+    "test:lv5": "node tests/verify_lv5.js",
+    "test:lv6": "node tests/verify_lv6.js",
+    "test:all": "node tests/run-ci-tests.sh"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -22,10 +22,10 @@ Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic qu
 
 ### 🟢 LEVEL 1 & 2: Core Logic & Security (TC01 - TC20)
 *   **TC01 - TC05 (Khoảng cách & Giá)**: 
-    *   **Code**: `services/booking-service/src/controllers/booking.controller.ts` (L6-15).
+    *   **Code**: `backend/microservices/booking-service/src/controllers/booking.controller.ts` (L6-15).
     *   **Logic**: Sử dụng công thức Haversine để tính khoảng cách thực tế giữa các tọa độ GPS.
 *   **TC11 - TC15 (Bảo mật JWT)**:
-    *   **Code**: `services/auth-service/src/middleware/auth.middleware.ts`.
+    *   **Code**: `backend/microservices/auth-service/src/middleware/auth.middleware.ts`.
     *   **Logic**: Kiểm tra chữ ký Bearer Token. Nếu không hợp lệ, Gateway sẽ chặn request ngay lập tức (Fail-fast).
 
 ### 🟡 LEVEL 3 & 4: ACID Compliance & Saga Pattern (TC21 - TC40)
@@ -48,13 +48,13 @@ Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic qu
 
 ### 🔴 LEVEL 5 & 6: AI Agent & Advanced Resilience (TC41 - TC60)
 *   **TC51 - TC53 (AI Agent Reasoning)**:
-    *   **Code**: `services/ai-matching-service/src/services/ai.service.ts`.
+    *   **Code**: `backend/microservices/ai-matching-service/src/backend/microservices/ai.service.ts`.
     *   **Logic**: Agent phân tích 4 tham số: Khoảng cách, Rating, Giá và Độ tin cậy (Reliability).
     *   **Decision**: 
         *   Priority **Speed**: Chọn driver gần nhất (Dòng code scoring AI).
         *   Priority **Quality**: Chọn driver có Rating 4.9+ dù xa hơn.
 *   **TC57 (Exclusion logic)**:
-    *   **Code**: `services/driver-service/src/controllers/driver.controller.ts` (Dòng 60).
+    *   **Code**: `backend/microservices/driver-service/src/controllers/driver.controller.ts` (Dòng 60).
     *   **Xử lý**: Khi tài xế OFFLINE, lệnh `redis.zRem` sẽ xóa họ khỏi bản đồ tìm kiếm. AI Agent sẽ tự động loại bỏ họ ra khỏi danh sách ứng viên.
 *   **TC58 (Decision Logging)**:
     *   **Mô tả**: Mọi quyết định của AI Agent đều được log kèm theo `matchingReason` (L260 trong Booking Controller) để phục vụ giải trình (Explainability).

@@ -71,11 +71,11 @@ services:
   # ── API Gateway ──────────────────────────────────────────────
 
   api-gateway:
-    build: ./services/api-gateway
+    build: ./backend/api-gateway
     ports:
       - "8080:8080"
     volumes:
-      - ./services/api-gateway/src:/app/src
+      - ./backend/api-gateway/src:/app/src
     environment:
       AUTH_SERVICE_URL: http://auth-service:3001
       BOOKING_SERVICE_URL: http://booking-service:3002
@@ -93,12 +93,12 @@ services:
   # ── Microservices ────────────────────────────────────────────
 
   auth-service:
-    build: ./services/auth-service
+    build: ./backend/microservices/auth-service
     ports:
       - "3001:3001"
     volumes:
-      - ./services/auth-service/src:/app/src
-      - ./services/auth-service/prisma:/app/prisma
+      - ./backend/microservices/auth-service/src:/app/src
+      - ./backend/microservices/auth-service/prisma:/app/prisma
     environment:
       PORT: 3001
       DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_auth
@@ -111,12 +111,12 @@ services:
       redis:    { condition: service_healthy }
 
   booking-service:
-    build: ./services/booking-service
+    build: ./backend/microservices/booking-service
     ports:
       - "3002:3002"
     volumes:
-      - ./services/booking-service/src:/app/src
-      - ./services/booking-service/prisma:/app/prisma
+      - ./backend/microservices/booking-service/src:/app/src
+      - ./backend/microservices/booking-service/prisma:/app/prisma
     environment:
       PORT: 3002
       DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_booking
@@ -131,11 +131,11 @@ services:
       postgres: { condition: service_healthy }
 
   ride-service:
-    build: ./services/ride-service
+    build: ./backend/microservices/ride-service
     ports:
       - "3003:3003"
     volumes:
-      - ./services/ride-service/src:/app/src
+      - ./backend/microservices/ride-service/src:/app/src
     environment:
       PORT: 3003
       REDIS_URL: redis://:cabgo_redis@redis:6379
@@ -144,12 +144,12 @@ services:
       redis:     { condition: service_healthy }
 
   driver-service:
-    build: ./services/driver-service
+    build: ./backend/microservices/driver-service
     ports:
       - "3004:3004"
     volumes:
-      - ./services/driver-service/src:/app/src
-      - ./services/driver-service/prisma:/app/prisma
+      - ./backend/microservices/driver-service/src:/app/src
+      - ./backend/microservices/driver-service/prisma:/app/prisma
     environment:
       PORT: 3004
       DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_driver
@@ -160,12 +160,12 @@ services:
       redis:    { condition: service_healthy }
 
   payment-service:
-    build: ./services/payment-service
+    build: ./backend/microservices/payment-service
     ports:
       - "3005:3005"
     volumes:
-      - ./services/payment-service/src:/app/src
-      - ./services/payment-service/prisma:/app/prisma
+      - ./backend/microservices/payment-service/src:/app/src
+      - ./backend/microservices/payment-service/prisma:/app/prisma
     environment:
       PORT: 3005
       DATABASE_URL: postgresql://cabgo:cabgo_secret@postgres:5432/cabgo_payment
@@ -175,31 +175,31 @@ services:
       postgres: { condition: service_healthy }
 
   pricing-service:
-    build: ./services/pricing-service
+    build: ./backend/microservices/pricing-service
     ports:
       - "3006:3006"
     environment:
       PORT: 3006
       REDIS_URL: redis://:cabgo_redis@redis:6379
     volumes:
-      - ./services/pricing-service/src:/app/src
+      - ./backend/microservices/pricing-service/src:/app/src
     depends_on:
       redis: { condition: service_healthy }
 
   notification-service:
-    build: ./services/notification-service
+    build: ./backend/microservices/notification-service
     ports:
       - "3007:3007"
     environment:
       PORT: 3007
       KAFKA_BROKERS: kafka:9092
     volumes:
-      - ./services/notification-service/src:/app/src
+      - ./backend/microservices/notification-service/src:/app/src
     depends_on:
       kafka: { condition: service_started }
 
   ai-matching-service:
-    build: ./services/ai-matching-service
+    build: ./backend/microservices/ai-matching-service
     ports:
       - "3008:3008"
     environment:
@@ -207,16 +207,16 @@ services:
       REDIS_URL: redis://:cabgo_redis@redis:6379
       KAFKA_BROKERS: kafka:9092
     volumes:
-      - ./services/ai-matching-service/src:/app/src
+      - ./backend/microservices/ai-matching-service/src:/app/src
     depends_on:
       redis: { condition: service_healthy }
 
   fraud-service:
-    build: ./services/fraud-service
+    build: ./backend/microservices/fraud-service
     ports:
       - "3009:3009"
     volumes:
-      - ./services/fraud-service/src:/app/src
+      - ./backend/microservices/fraud-service/src:/app/src
     environment:
       PORT: 3009
     depends_on:
@@ -227,43 +227,49 @@ services:
   customer-app:
     build:
       context: .
-      dockerfile: ./apps/customer-app/Dockerfile
+      dockerfile: ./frontend/customer-app/Dockerfile
       args:
         NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
         NEXT_PUBLIC_WS_URL: http://localhost:8080
         NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_TOKEN}
     ports:
-      - "3100:3100"
+      - "4100:4100"
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=2048
     volumes:
-      - ./apps/customer-app:/app/apps/customer-app
+      - ./frontend/customer-app:/app/frontend/customer-app
       - ./packages/types:/app/packages/types
-      - /app/apps/customer-app/node_modules
+      - /app/frontend/customer-app/node_modules
 
   driver-app:
     build:
       context: .
-      dockerfile: ./apps/driver-app/Dockerfile
+      dockerfile: ./frontend/driver-app/Dockerfile
       args:
         NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
         NEXT_PUBLIC_WS_URL: http://localhost:8080
     ports:
-      - "3200:3200"
+      - "4200:4200"
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=2048
     volumes:
-      - ./apps/driver-app:/app/apps/driver-app
+      - ./frontend/driver-app:/app/frontend/driver-app
       - ./packages/types:/app/packages/types
-      - /app/apps/driver-app/node_modules
+      - /app/frontend/driver-app/node_modules
 
   admin-dashboard:
     build:
       context: .
-      dockerfile: ./apps/admin-dashboard/Dockerfile
+      dockerfile: ./frontend/admin-dashboard/Dockerfile
       args:
         NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
     ports:
-      - "3300:3300"
+      - "4300:4300"
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=2048
     volumes:
-      - ./apps/admin-dashboard:/app/apps/admin-dashboard
-      - /app/apps/admin-dashboard/node_modules
+      - ./frontend/admin-dashboard:/app/frontend/admin-dashboard
+      - /app/frontend/admin-dashboard/node_modules
 
 volumes:
   postgres_data:

@@ -1,113 +1,373 @@
-# 🚖 CabGo: Bí Kíp Vấn Đáp "Siêu Cấp" (Full 60 Testcases - Chuẩn Spec)
+# 🚖 CabGo: VIVA Master Guide (Level 1 - Level 6)
+## Hướng dẫn chi tiết 60 Test Cases cho Hội đồng Chấm thi
 
-Tài liệu này khớp 100% với danh sách 60 Testcases yêu cầu. Mỗi mục chỉ rõ: **Hàm**, **Dòng Code Message**, **Luồng gọi**, **Input** và **Kết quả mong đợi**.
-
----
-
-## 🏛️ Sơ đồ Luồng gọi Tổng quát
-> "Thưa thầy, hệ thống em dùng mô hình **Orchestrator**. **Booking Service** đóng vai trò nhạc trưởng, gọi tuần tự sang **AI Matching**, **Pricing**, và **Payment**. Sau đó dùng **Kafka Outbox Pattern** để đảm bảo tính nhất quán dữ liệu."
+Tài liệu này cung cấp hướng dẫn thực hiện, tham chiếu mã nguồn và kết quả kỳ vọng cho toàn bộ 60 Test Cases (TC) từ Level 1 đến Level 6 của hệ thống CabGo.
 
 ---
 
-## 🟢 LEVEL 1 – CƠ BẢN (Happy Path: TC01 - TC10)
-
-| ID | Test Case | Vị trí Code, Hàm & Dòng | Lời thoại & Luồng gọi (Cheat Sheet) |
-|:---|:---|:---|:---|
-| 1 | Đăng ký thành công | `auth.controller.ts`<br>Hàm: `register`<br>**Dòng: 53** | **🔄 Luồng:** `Gateway` ➔ `Auth` ➔ `DB`.<br>**📥 Input:** `email`, `password`, `name`.<br>**✅ Expected:** HTTP 201, User được lưu DB, Trả về `user_id`.<br>**👉 Chứng minh:** Chỉ vào `bcrypt.hash` dòng 30. |
-| 2 | Đăng nhập trả JWT | `auth.controller.ts`<br>Hàm: `login`<br>**Dòng: 90** | **🔄 Luồng:** `Auth` (Verify pass) ➔ Trả JWT.<br>**📥 Input:** `email`, `password`.<br>**✅ Expected:** HTTP 200, Trả về `access_token` (JWT).<br>**👉 Chứng minh:** Giải thích `sub` (userId) và `exp` sinh ra ở dòng 84. |
-| 3 | Tạo booking hợp lệ | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 424** | **🔄 Luồng:** `Booking` ➔ `AI` ➔ `Pricing`.<br>**📥 Input:** `pickup`, `drop`, `distance_km`.<br>**✅ Expected:** HTTP 201, Có `booking_id`, status `REQUESTED`.<br>**👉 Chứng minh:** Show JSON có đủ Price/ETA. |
-| 4 | Lấy list booking | `booking.controller.ts`<br>Hàm: `getBookings`<br>**Dòng: 475** | **🔄 Luồng:** `Gateway` ➔ `Booking` ➔ `DB`.<br>**📥 Input:** `GET /bookings?user_id=...`<br>**✅ Expected:** HTTP 200, Trả về list booking.<br>**👉 Chứng minh:** Query từ bảng `bookings` trong DB. |
-| 5 | Driver Online | `driver.controller.ts`<br>Hàm: `updateStatus`<br>**Dòng: 63** | **🔄 Luồng:** `Driver` ➔ `Redis` (GeoAdd).<br>**📥 Input:** `driver_id`, `status: ONLINE`.<br>**✅ Expected:** HTTP 200, Status updated = ONLINE.<br>**👉 Chứng minh:** Show dòng 42: Đẩy tọa độ lên Redis Geo. |
-| 6 | Status = REQUESTED | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 258** | **🔄 Luồng:** Gán status mặc định tại Booking Service.<br>**✅ Expected:** Status ban đầu = REQUESTED, Có `created_at`.<br>**👉 Chứng minh:** Chỉ vào dòng 258 trong code. |
-| 7 | ETA trả về > 0 | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 235** | **🔄 Luồng:** `Booking` ➔ `AI Matching`.<br>**✅ Expected:** `eta > 0` và hợp lý (< 60p).<br>**👉 Chứng minh:** Show API call AI Matching ở dòng 208. |
-| 8 | Pricing giá hợp lệ | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 238** | **🔄 Luồng:** `Booking` ➔ `Pricing Service`.<br>**✅ Expected:** `price > base fare`, `surge >= 1`.<br>**👉 Chứng minh:** Show API call Pricing ở dòng 212. |
-| 9 | Notification gửi OK | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 400** | **🔄 Luồng:** `Booking` ➔ `Kafka` ➔ `Notification`.<br>**✅ Expected:** `notification_sent: true`.<br>**👉 Chứng minh:** Show cờ thông báo trong response. |
-| 10 | Logout invalidate | `auth.controller.ts`<br>Hàm: `logout`<br>**Dòng: 122** | **🔄 Luồng:** `Auth` ➔ `Redis` (Blacklist).<br>**✅ Expected:** HTTP 200, Token cũ gọi lại trả 401.<br>**👉 Chứng minh:** Mở dòng 117: Set token vào blacklist. |
+## 🏛️ Tổng quan Kiến trúc (High-Level)
+Hệ thống sử dụng mô hình **Microservices** với **API Gateway** là cửa ngõ duy nhất. Quy trình đặt xe được điều phối bởi **Booking Service** (Orchestrator) kết hợp với **Agentic AI** để đưa ra quyết định chọn tài xế tối ưu.
 
 ---
 
-## 🟢 LEVEL 2 – VALIDATION & EDGE CASES (TC11 - TC20)
+## 🟢 LEVEL 1: HAPPY PATH (TC 01 - TC 10)
+*Mục tiêu: Đảm bảo các luồng cơ bản hoạt động trơn tru.*
 
-| ID | Test Case | Vị trí Code, Hàm & Dòng | Lời thoại & Luồng gọi (Cheat Sheet) |
-|:---|:---|:---|:---|
-| 11 | Thiếu pickup -> 400 | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 113** | **✅ Expected:** HTTP 400, Message: "pickup is required".<br>**👉 Chứng minh:** Bôi đen dòng 113 để show phần validate input. |
-| 12 | Sai format Lat/Lng | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 120** | **✅ Expected:** HTTP 400/422, Reject không gọi AI service.<br>**👉 Chứng minh:** Gửi string vào lat/lng -> Chặn ở dòng 120. |
-| 13 | Driver offline | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 232** | **🔄 Luồng:** Redis check không có driver ONLINE.<br>**✅ Expected:** Message: "No drivers available".<br>**👉 Chứng minh:** Chạy Test 13 khi không có driver nào bật app. |
-| 14 | Payment Invalid | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 114** | **✅ Expected:** HTTP 400 hoặc tự động đưa về CASH.<br>**👉 Chứng minh:** Nhấn mạnh hệ thống fail-safe ở dòng 114. |
-| 15 | Distance = 0 | `booking.controller.ts`<br>Hàm: `calculateDistanceKm`<br>**Dòng: 14** | **✅ Expected:** `eta = 0`, không crash, không giá trị âm.<br>**👉 Chứng minh:** Gửi pickup trùng drop -> Show distance trả về 0. |
-| 16 | Demand Index = 0 | `pricing.controller.ts` | **✅ Expected:** `surge_multiplier >= 1`, Giá vẫn hợp lệ.<br>**👉 Chứng minh:** Logic giá không bao giờ = 0. Chống chia cho 0. |
-| 17 | Fraud thiếu field | `fraud.controller.ts` | **✅ Expected:** HTTP 400, "missing required fields".<br>**👉 Chứng minh:** Fraud cần đủ context (user_id, amount...) để chấm điểm. |
-| 18 | Token Expired | `auth.middleware.ts` | **✅ Expected:** HTTP 401, "Token expired".<br>**👉 Chứng minh:** Middleware chặn request trước khi vào Business Logic. |
-| 19 | Idempotency Check | `booking.controller.ts`<br>Hàm: `createBooking`<br>**Dòng: 148** | **✅ Expected:** Chỉ tạo 1 booking, request 2 trả kết quả cũ.<br>**👉 Chứng minh:** Chỉ vào dòng 148: `redis.get(idempotencyKey)`. |
-| 20 | Payload quá lớn | Gateway Config | **✅ Expected:** HTTP 413 Payload Too Large.<br>**👉 Chứng minh:** Chặn ở tầng hạ tầng để chống DDoS/Buffer Overflow. |
+### TC 01: Đăng ký thành công (Register)
+- **Postman:** `POST {{GATEWAY_URL}}/auth/register`
+- **Body:** `{ "email": "user1@gmail.com", "password": "password123", "name": "User One" }`
+- **Logic:** Mã hóa password bằng `bcrypt` và lưu vào bảng `User`.
+- **Code:** [auth.controller.ts:56](file:///e:/Cab-booking/backend/microservices/auth-service/src/controllers/auth.controller.ts#L56)
+- **Kết quả:** Trả về `201 Created`, Log: `[POSTMAN LEVEL 1] TEST 1: SUCCESS`.
 
----
+### TC 02: Đăng nhập trả JWT (Login)
+- **Postman:** `POST {{GATEWAY_URL}}/auth/login`
+- **Body:** `{ "email": "user1@gmail.com", "password": "password123" }`
+- **Logic:** So khớp hash password, ký JWT token chứa `userId` và `role`.
+- **Code:** [auth.controller.ts:97](file:///e:/Cab-booking/backend/microservices/auth-service/src/controllers/auth.controller.ts#L97)
+- **Kết quả:** Trả về `200 OK` kèm `access_token`.
 
-## 🟡 LEVEL 3 – INTEGRATION TEST (TC21 - TC30)
+### TC 03: Tạo booking hợp lệ (Create Booking)
+- **Postman:** `POST {{GATEWAY_URL}}/bookings`
+- **Headers:** `Authorization: Bearer {{token}}`
+- **Body:** `{ "pickup": {"lat": 10.7, "lng": 106.6}, "drop": {"lat": 10.8, "lng": 106.7} }`
+- **Logic:** Khởi động quy trình Orchestration (Gọi Pricing -> AI Matching).
+- **Code:** [booking.controller.ts:113](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L113)
+- **Kết quả:** Trả về `201 Created`, trạng thái `REQUESTED`.
 
-| ID | Test Case | Vị trí Code, Hàm & Dòng | Lời thoại & Luồng gọi (Cheat Sheet) |
-|:---|:---|:---|:---|
-| 21 | Gọi ETA thành công | `booking.controller.ts`<br>Dòng: 208 | **🔄 Luồng:** `Booking` ➔ `AI Matching`. Trả `eta > 0`. |
-| 22 | Gọi Pricing thành công | `booking.controller.ts`<br>Dòng: 212 | **🔄 Luồng:** `Booking` ➔ `Pricing`. Trả `price > 0`. |
-| 23 | Agent chọn Driver | `ai.service.ts` | **🔄 Luồng:** `AI Agent` fetch driver từ Driver Service.<br>**✅ Expected:** Chọn đúng driver ONLINE. |
-| 24 | Full Flow (End-to-End)| `booking.controller.ts` | **🔄 Luồng:** Booking ➔ Payment ➔ Notification.<br>**✅ Expected:** Cả chuỗi thành công mượt mà. |
-| 25 | Kafka ride_requested | `booking.controller.ts`<br>Dòng: 273 | **🔄 Luồng:** Publish event lên Kafka topic `ride_events`.<br>**👉 Chứng minh:** Show bảng outbox ghi lại event. |
-| 26 | Driver nhận Notify | `notification-service` | **🔄 Luồng:** Consumer Kafka nhận event và đẩy Notify.<br>**👉 Chứng minh:** Show log receiver của Notification Service. |
-| 27 | Status ACCEPTED | `booking.controller.ts`<br>Dòng: 448 | **🔄 Luồng:** Driver accept ➔ Booking update ACCEPTED.<br>**👉 Chứng minh:** Chạy API update status driver. |
-| 28 | MCP Context Fetch | `ai-matching-service` | **🔄 Luồng:** Agent fetch dữ liệu Rating/Traffic làm context.<br>**👉 Chứng minh:** Show matching_reason có đủ thông tin context. |
-| 29 | Gateway Route | `api-gateway` | **🔄 Luồng:** Route đúng Port 3002 cho Booking.<br>**👉 Chứng minh:** Show config file gateway. |
-| 30 | Retry Pricing | `booking.controller.ts`<br>Dòng: 192 | **🔄 Luồng:** `axios-retry` xử lý khi Pricing bị timeout.<br>**👉 Chứng minh:** Hệ thống không crash mà tự gọi lại. |
+### TC 04: Lấy danh sách Booking (Get List)
+- **Postman:** `GET {{GATEWAY_URL}}/bookings`
+- **Logic:** Truy vấn danh sách cuốc xe của user hiện tại từ Database.
+- **Code:** [booking.controller.ts:613](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L613)
+- **Kết quả:** Trả về mảng các bookings.
 
----
+### TC 05: Tài xế Online (Driver Status)
+- **Postman:** `PATCH {{GATEWAY_URL}}/drivers/status`
+- **Body:** `{ "status": "ONLINE", "lat": 10.7, "lng": 106.6 }`
+- **Logic:** Lưu trạng thái vào DB và đồng bộ tọa độ vào **Redis Geo** để tìm kiếm nhanh.
+- **Code:** [driver.controller.ts:60](file:///e:/Cab-booking/backend/microservices/driver-service/src/controllers/driver.controller.ts#L60)
+- **Kết quả:** `200 OK`, Log: `Driver now ONLINE and synced to Redis Geo`.
 
-## 🟡 LEVEL 4 – TRANSACTION & ACID (TC31 - TC40) 💎
+### TC 06: Trạng thái ban đầu = REQUESTED
+- **Logic:** Mọi cuốc xe mới tạo (không lỗi thanh toán) phải có status `REQUESTED`.
+- **Code:** [booking.controller.ts:536](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L536)
+- **Kết quả:** `data.status === "REQUESTED"` trong response JSON.
 
-| ID | Test Case | Vị trí Code, Hàm & Dòng | Lời thoại & Luồng gọi (Cheat Sheet) |
-|:---|:---|:---|:---|
-| 31 | Transaction OK | `booking.controller.ts`<br>Dòng: 248 | **✅ Expected:** DB commit thành công Booking + Outbox. |
-| 32 | Rollback giữa chừng | `booking.controller.ts`<br>Dòng: 286 | **🔄 Luồng:** Lỗi DB ➔ Rollback.<br>**✅ Expected:** Không có booking nào trong DB (Consistent). |
-| 33 | Payment Fail Rollback | `booking.controller.ts`<br>Dòng: 374 | **🔄 Luồng:** Thanh toán lỗi ➔ Saga Compensation.<br>**✅ Expected:** Status chuyển về `CANCELLED`. |
-| 34 | Idempotent Key | `booking.controller.ts`<br>Dòng: 431 | **✅ Expected:** Không double charge tiền khi retry cùng key. |
-| 35 | Race Condition | `booking.controller.ts`<br>Dòng: 180 | **🔄 Luồng:** 2 request song song ➔ Redis Lock chặn 1 cái.<br>**✅ Expected:** Chỉ 1 booking được tạo. |
-| 36 | Saga Success Flow | `booking.controller.ts` | **🔄 Luồng:** Full 3 bước: Create ➔ Pay ➔ Commit. |
-| 37 | Saga Compensation | `booking.controller.ts`<br>Dòng: 378 | **🔄 Luồng:** Bước hoàn tác khi Payment fail ở dòng 353. |
-| 38 | Kafka Consistency | `booking.controller.ts`<br>Dòng: 405 | **🔄 Luồng:** Outbox Pattern đảm bảo không mất Event Kafka. |
-| 39 | Partial Failure | `booking.controller.ts`<br>Dòng: 357 | **🔄 Luồng:** Timeout payment ➔ Không hủy đơn (PENDING). |
-| 40 | Data Integrity (ACID) | `scripts/acid-cleanup.sql` | **👉 Chứng minh:** Giải thích Atomic, Consistent, Isolated, Durable qua code. |
+### TC 07: ETA trả về > 0 (Estimated Time)
+- **Logic:** AI Matching Service tính toán thời gian dựa trên khoảng cách và vận tốc.
+- **Code:** [booking.controller.ts:328](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L328)
+- **Kết quả:** JSON có trường `driver_eta` (ví dụ: `5` phút).
 
----
+### TC 08: Giá hợp lệ (Pricing)
+- **Logic:** Pricing Service tính toán dựa trên `Base Fare + (Distance * Rate)`.
+- **Code:** [booking.controller.ts:329](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L329)
+- **Kết quả:** JSON có trường `price` (ví dụ: `35000`).
 
-## 🔴 LEVEL 5 – AI VALIDATION (TC41 - TC50)
+### TC 09: Flag thông báo thành công (Notification)
+- **Logic:** Booking Service đánh dấu `notificationSent: true` sau khi đẩy event.
+- **Code:** [booking.controller.ts:537](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L537)
+- **Kết quả:** Kiểm tra response có `notification_sent: true`.
 
-| ID | Test Case | Vị trí Code, Hàm & Dòng | Lời thoại & Luồng gọi (Cheat Sheet) |
-|:---|:---|:---|:---|
-| 41 | ETA Range hợp lý | `ai.service.ts` | **✅ Expected:** 5km thì ETA không thể là 999 phút hay -1. |
-| 42 | Surge > 1 khi cao điểm | `pricing-service` | **✅ Expected:** Demand=2 ➔ Surge > 1 (Max 3x). |
-| 43 | Fraud Score Flagged | `fraud-service` | **✅ Expected:** Score > threshold ➔ Flag = true. |
-| 44 | Recommendation Top-3 | `ai.service.ts` | **✅ Expected:** Trả đúng 3 driver tốt nhất. |
-| 45 | Forecast Format | `demand-service` | **✅ Expected:** Trả JSON có timestamp và value dự báo. |
-| 46 | Model Version | `ai.service.ts` | **✅ Expected:** Trả đúng version model hiện hành. |
-| 47 | AI Latency < 200ms | `ai-matching-service` | **✅ Expected:** Phản hồi nhanh để kịp Real-time. |
-| 48 | Drift Detection | Monitoring Service | **🔄 Luồng:** Phát hiện dữ liệu thực tế thay đổi so với training. |
-| 49 | Model Fallback | `booking.controller.ts`<br>Dòng: 216 | **🔄 Luồng:** AI sập ➔ Dùng Rule-based logic. |
-| 50 | Input bất thường | `ai-matching-service` | **✅ Expected:** Dist = 1000km ➔ Model không crash. |
+### TC 10: Logout (Blacklist Token)
+- **Postman:** `POST {{GATEWAY_URL}}/auth/logout`
+- **Logic:** Đưa JWT vào Redis Blacklist với TTL bằng thời gian hết hạn còn lại của token.
+- **Code:** [auth.controller.ts:130](file:///e:/Cab-booking/backend/microservices/auth-service/src/controllers/auth.controller.ts#L130)
+- **Kết quả:** Token cũ không thể sử dụng để gọi API tiếp theo.
 
 ---
 
-## 🔴 LEVEL 6 – AI AGENT LOGIC (TC51 - TC60) 🤖
+## 🟢 LEVEL 2: VALIDATION & EDGE CASES (TC 11 - TC 20)
+*Mục tiêu: Xử lý dữ liệu sai và các tình huống biên.*
 
-| ID | Test Case | Vị trí Code, Hàm & Dòng | Lời thoại & Luồng gọi (Cheat Sheet) |
-|:---|:---|:---|:---|
-| 51 | Agent chọn gần nhất | `ai.service.ts` | **✅ Expected:** D1(5km), D2(2km), D3(3km) ➔ Chọn D2. |
-| 52 | Agent chọn Rating cao | `ai.service.ts` | **✅ Expected:** D1(2km, 4.0), D2(3km, 4.9) ➔ Chọn D2. |
-| 53 | Trade-off Giá vs ETA | `ai.service.ts` | **✅ Expected:** Agent chọn phương án tối ưu đa mục tiêu. |
-| 54 | Gọi đúng Tool | `booking.controller.ts`<br>Dòng: 208 | **🔄 Luồng:** Agent tự quyết định gọi ETA và Pricing đúng thứ tự. |
-| 55 | Xử lý thiếu dữ liệu | `ai.service.ts` | **✅ Expected:** Không crash, tự dùng Fallback data (L221). |
-| 56 | Agent Retry | `booking.controller.ts`<br>Dòng: 308 | **🔄 Luồng:** Thử lại khi service ETA lag. |
-| 57 | Không chọn Offline | `driver.controller.ts`<br>Dòng: 60 | **🔄 Luồng:** Xóa khỏi Redis nên Agent không bao giờ chọn nhầm. |
-| 58 | Log Decision đầy đủ | `booking.controller.ts`<br>Dòng: 241 | **✅ Expected:** Có `matching_reason` giải trình vì sao chọn. |
-| 59 | Request song song | `booking.controller.ts`<br>Dòng: 180 | **✅ Expected:** Agent xử lý nhiều khách cùng lúc không race. |
-| 60 | Fallback Rule-based | `booking.controller.ts`<br>Dòng: 222 | **✅ Expected:** AI chết hệ thống vẫn sống bằng code cũ. |
+### TC 11: Thiếu trường bắt buộc (Zod Validation)
+- **Postman:** `POST {{GATEWAY_URL}}/bookings` | Body: `{}` (Rỗng)
+- **Logic:** Middleware dùng Zod parse body, phát hiện thiếu `pickup`/`drop`.
+- **Code:** [validate.middleware.ts:34](file:///e:/Cab-booking/backend/microservices/booking-service/src/middleware/validate.middleware.ts#L34)
+- **Kết quả:** `400 Bad Request`, message chi tiết lỗi field.
+
+### TC 12: Tọa độ sai format
+- **Body:** `{ "pickup": {"lat": "abc", "lng": 106} }`
+- **Logic:** Kiểm tra kiểu dữ liệu tọa độ phải là `number`.
+- **Code:** [validate.middleware.ts:72](file:///e:/Cab-booking/backend/microservices/booking-service/src/middleware/validate.middleware.ts#L72)
+- **Kết quả:** `422 Unprocessable Entity`.
+
+### TC 13: Không có tài xế Online (No Drivers)
+- **Kịch bản:** Chỉnh tất cả tài xế về `OFFLINE`.
+- **Logic:** Booking Service gọi sang Driver Service, nhận mảng rỗng -> Trả về thông báo nhẹ nhàng.
+- **Code:** [booking.controller.ts:290](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L290)
+- **Kết quả:** `200 OK`, message: `No drivers available`.
+
+### TC 14: Phương thức thanh toán không hỗ trợ
+- **Body:** `{ ..., "payment_method": "BITCOIN" }`
+- **Logic:** Chặn ngay tại middleware nếu không thuộc `CASH` hoặc `CARD`.
+- **Code:** [validate.middleware.ts:64](file:///e:/Cab-booking/backend/microservices/booking-service/src/middleware/validate.middleware.ts#L64)
+- **Kết quả:** `400 Bad Request`.
+
+### TC 15: Khoảng cách = 0 (Pickup trùng Drop)
+- **Body:** `{ "pickup": {"lat": 10, "lng": 10}, "drop": {"lat": 10, "lng": 10} }`
+- **Logic:** Hàm `calculateDistanceKm` xử lý an toàn trả về 0, hệ thống không crash.
+- **Code:** [booking.controller.ts:133](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L133)
+- **Kết quả:** Booking vẫn được tạo với `distance_km: 0`.
+
+### TC 16: Demand Index = 0 (Pricing Base)
+- **Logic:** Dù nhu cầu cực thấp, giá vẫn không bao giờ dưới mức `Base Fare`.
+- **Code:** [pricing-service/src/index.ts:29](file:///e:/Cab-booking/backend/microservices/pricing-service/src/index.ts#L29)
+- **Kết quả:** Log xác nhận sử dụng giá sàn.
+
+### TC 17: Fraud Service thiếu field
+- **Postman:** `POST {{GATEWAY_URL}}/fraud/check` | Body thiếu `amount`.
+- **Logic:** Fraud Service tự validate đầu vào để tránh xử lý dữ liệu rác.
+- **Code:** [fraud-service/src/index.ts:55](file:///e:/Cab-booking/backend/microservices/fraud-service/src/index.ts#L55)
+- **Kết quả:** `400 Bad Request`.
+
+### TC 18: Token hết hạn (Expired)
+- **Thực hiện:** Sử dụng token có giá trị `expired_token` để test.
+- **Logic:** API Gateway middleware kiểm tra tính hợp lệ và thời hạn của token.
+- **Code:** [api-gateway/src/middleware/auth.ts:38](file:///e:/Cab-booking/backend/api-gateway/src/middleware/auth.ts#L38)
+- **Kết quả:** `401 Unauthorized`, message: `Token expired`.
+
+### TC 19: Idempotency Key (Chống đặt trùng)
+- **Headers:** `x-idempotency-key: unique-123`
+- **Thực hiện:** Gửi 2 request giống hệt nhau liên tiếp với cùng Key.
+- **Logic:** Redis lưu kết quả của request đầu tiên, trả về ngay cho request thứ 2.
+- **Code:** [booking.controller.ts:184](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L184)
+- **Kết quả:** Cả 2 request đều nhận cùng `booking_id`, Log: `Idempotency hit`.
+
+### TC 20: Payload quá lớn (Security)
+- **Thực hiện:** Gửi request body có kích thước > 1MB.
+- **Logic:** Gateway giới hạn `json limit` để tránh tấn công DoS.
+- **Code:** [api-gateway/src/index.ts:42](file:///e:/Cab-booking/backend/api-gateway/src/index.ts#L42)
+- **Kết quả:** `413 Payload Too Large`.
 
 ---
-*CHÚC BẠN BẢO VỆ THÀNH CÔNG RỰC RỠ VỚI 60 VŨ KHÍ NÀY!*
+
+## 🟡 LEVEL 3: INTEGRATION & ARCHITECTURE (TC 21 - TC 30)
+*Mục tiêu: Kiểm tra sự phối hợp giữa các Microservices.*
+
+### TC 21: Gọi AI Matching thành công
+- **Logic:** Booking Service gọi sang AI Service qua HTTP nội bộ.
+- **Code:** [booking.controller.ts:259](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L259)
+- **Kết quả:** Log: `Integration call to AI Matching/ETA successful`.
+
+### TC 22: Chống trùng lặp nghiệp vụ (Business Idempotency)
+- **Logic:** Nếu cùng một User đặt 2 cuốc tại cùng vị trí trong vòng 5 phút, hệ thống tự nhận diện là trùng.
+- **Code:** [booking.controller.ts:209](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L209)
+- **Kết quả:** Trả về cuốc xe hiện có thay vì tạo mới.
+
+### TC 23: Agent chấm điểm tài xế
+- **Logic:** AI Agent fetch tài xế từ Redis Geo và áp dụng Scoring Model.
+- **Code:** [agent.orchestrator.ts:156](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L156)
+- **Kết quả:** Log chi tiết quá trình chấm điểm ứng viên.
+
+### TC 24: Luồng Full E2E (Happy Path)
+- **Luồng:** Gateway -> Booking -> (Pricing & AI Matching) -> Payment -> Notification.
+- **Code:** [booking.controller.ts:249](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L249)
+- **Kết quả:** Booking kết thúc với trạng thái `REQUESTED` và thanh toán thành công.
+
+### TC 25: Transactional Outbox Pattern
+- **Logic:** Lưu Booking và Message vào DB trong cùng 1 Transaction để đảm bảo không mất event.
+- **Code:** [booking.controller.ts:524](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L524)
+- **Kết quả:** Log xác nhận event đã được lưu vào bảng `Outbox`.
+
+### TC 26: Kafka Notification Consumer
+- **Logic:** Notification Service lắng nghe Kafka topic `ride_events` để gửi thông báo.
+- **Code:** [notification-service/src/index.ts:33](file:///e:/Cab-booking/backend/microservices/notification-service/src/index.ts#L33)
+- **Kết quả:** Log: `Kafka Notification Consumer: Received event`.
+
+### TC 27: Cập nhật status = ACCEPTED
+- **Postman:** `PATCH {{GATEWAY_URL}}/bookings/:id` | Body: `{ "status": "ACCEPTED" }`
+- **Logic:** Tài xế chấp nhận cuốc xe, cập nhật trạng thái đồng bộ.
+- **Code:** [booking.controller.ts:572](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L572)
+- **Kết quả:** `200 OK`, status chuyển sang `ACCEPTED`.
+
+### TC 28: Agent lấy Context (Extended Data)
+- **Logic:** Agent lấy thêm thông tin Rating, Traffic từ DB/Redis để làm input cho AI.
+- **Code:** [agent.orchestrator.ts:157](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L157)
+- **Kết quả:** Log: `Agent retrieved extended context (Rating/Traffic)`.
+
+### TC 29: Gateway Route Matching
+- **Logic:** Gateway điều hướng đúng request `/bookings` vào Booking Service.
+- **Code:** [api-gateway/src/index.ts:73](file:///e:/Cab-booking/backend/api-gateway/src/index.ts#L73)
+- **Kết quả:** Log: `Gateway Route successful`.
+
+### TC 30: Chiến lược Retry (Exponential Backoff)
+- **Logic:** Nếu Pricing Service bị lag, Booking Service tự động thử lại với thời gian chờ tăng dần.
+- **Code:** [booking.controller.ts:268](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L268)
+- **Kết quả:** Log xác nhận call thành công sau khi retry.
+
+---
+
+## 💎 LEVEL 4: TRANSACTION & ACID (TC 31 - TC 40)
+*Mục tiêu: Đảm bảo tính toàn vẹn dữ liệu cực cao.*
+
+### TC 31: DB Transaction thành công (ACID)
+- **Logic:** Cả Booking và Outbox message được commit đồng thời.
+- **Code:** [booking.controller.ts:388](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L388)
+- **Kết quả:** Dữ liệu xuất hiện đầy đủ trong cả 2 bảng.
+
+### TC 32: Rollback khi lỗi DB
+- **Thực hiện:** Body: `{ "simulate_db_error": true }`
+- **Logic:** Nếu lỗi xảy ra sau khi tạo Booking nhưng trước khi commit Outbox -> Rollback toàn bộ.
+- **Code:** [booking.controller.ts:383](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L383)
+- **Kết quả:** Không có dòng dữ liệu nào được lưu vào DB (ACID chuẩn).
+
+### TC 33: Saga Compensation (Hủy cuốc khi thanh toán lỗi)
+- **Thực hiện:** Body: `{ "payment_method": "CARD", "simulate_payment_failure": true }`
+- **Logic:** Thanh toán thẻ thất bại -> Tự động cập nhật status Booking về `CANCELLED`.
+- **Code:** [booking.controller.ts:489](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L489)
+- **Kết quả:** Response trả về lỗi 400 kèm status `CANCELLED`.
+
+### TC 34: Idempotent Payment (Tránh trừ tiền 2 lần)
+- **Logic:** Payment Service kiểm tra `booking_id` trước khi Charge tiền.
+- **Code:** [payment-service/src/index.ts:194](file:///e:/Cab-booking/backend/microservices/payment-service/src/index.ts#L194)
+- **Kết quả:** Log: `Payment already exists for booking`.
+
+### TC 35: Race Condition Lock (Distributed Lock)
+- **Thực hiện:** Body: `{ "simulate_race_condition": true }`
+- **Logic:** Dùng Redis Lock để ngăn 2 request đồng thời từ cùng 1 User.
+- **Code:** [booking.controller.ts:117](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L117)
+- **Kết quả:** `409 Conflict`, message: `Another booking is in progress`.
+
+### TC 36: Saga Full Success Flow
+- **Logic:** Hoàn tất chuỗi: Đặt xe -> Thu tiền thẻ -> Phát hành event.
+- **Code:** [booking.controller.ts:428](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L428)
+- **Kết quả:** Log: `Saga Full Flow: Payment processed successfully`.
+
+### TC 37: Saga Compensating Transaction
+- **Logic:** Thực hiện bước hoàn tác (Compensation) khi một bước trong chuỗi Saga thất bại.
+- **Code:** [booking.controller.ts:490](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L490)
+- **Kết quả:** Log xác nhận `Saga Compensating Transaction executed`.
+
+### TC 38: Kafka Data Consistency
+- **Logic:** Outbox Worker đảm bảo mọi event trong DB đều được đẩy lên Kafka.
+- **Code:** [booking.controller.ts:525](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L525)
+- **Kết quả:** Event xuất hiện trên Kafka đúng thứ tự.
+
+### TC 39: Partial Failure Recovery (Timeout Payment)
+- **Thực hiện:** Body: `{ "simulate_payment_timeout": true }`
+- **Logic:** Thanh toán bị timeout (không rõ thành công hay chưa) -> Để status `REQUESTED` nhưng đánh dấu `failureReason: PAYMENT_TIMEOUT` để xử lý sau.
+- **Code:** [booking.controller.ts:475](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L475)
+- **Kết quả:** Booking vẫn được tạo nhưng kèm cảnh báo Timeout.
+
+### TC 40: ACID Cleanup Script
+- **Kịch bản:** Chạy SQL script để kiểm tra các bản ghi rác từ các cuộc test rollback.
+- **Code:** `scripts/acid-cleanup.sql` (Chạy tay hoặc trigger tự động).
+
+---
+
+## 🔴 LEVEL 5: AI VALIDATION & FRAUD (TC 41 - TC 50)
+*Mục tiêu: Đưa trí tuệ nhân tạo và an toàn tài chính vào hệ thống.*
+
+### TC 41: AI Chọn tài xế tốt nhất (Scoring)
+- **Logic:** Agent so sánh các ứng viên dựa trên Score (tổng hợp Dist, Rating, Acc Rate).
+- **Code:** [agent.orchestrator.ts:158](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L158)
+- **Kết quả:** Tài xế có điểm cao nhất được chọn (không chỉ là người gần nhất).
+
+### TC 42: Surge Pricing khi cao điểm
+- **Logic:** Tự động áp dụng `Surge Multiplier` khi nhu cầu (demand_index) tăng cao.
+- **Code:** [pricing-service/src/index.ts:37](file:///e:/Cab-booking/backend/microservices/pricing-service/src/index.ts#L37)
+- **Kết quả:** Giá tăng so với bình thường, có tag `surge_multiplier > 1.0`.
+
+### TC 43: Fraud Detection (Phát hiện gian lận)
+- **Thực hiện:** Đặt xe với số tiền > 10,000,000đ.
+- **Logic:** Fraud Service đánh dấu `is_fraud: true` dựa trên ngưỡng giao dịch.
+- **Code:** [fraud-service/src/index.ts:34](file:///e:/Cab-booking/backend/microservices/fraud-service/src/index.ts#L34)
+- **Kết quả:** Hệ thống log cảnh báo gian lận.
+
+### TC 44: Recommendation Top-3 (Đề xuất)
+- **Logic:** Ngoài tài xế thắng cuộc, AI trả về danh sách 2 người tiềm năng tiếp theo.
+- **Code:** [agent.orchestrator.ts:179](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L179)
+- **Kết quả:** JSON có mảng `topDrivers` với 3 phần tử.
+
+### TC 45: Forecast Demand (Dự báo nhu cầu)
+- **Logic:** Agent phân tích dữ liệu lịch sử để dự báo khu vực sắp có nhu cầu cao.
+- **Code:** [agent.orchestrator.ts:180](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L180)
+- **Kết quả:** Log: `Forecast Demand logic executed`.
+
+### TC 46: Model Versioning (Quản lý phiên bản AI)
+- **Logic:** Gắn tag phiên bản Model vào response để phục vụ việc giám sát A/B Testing.
+- **Code:** [fraud-service/src/index.ts:47](file:///e:/Cab-booking/backend/microservices/fraud-service/src/index.ts#L47)
+- **Kết quả:** Response JSON có trường `model_version: "v1.2.0"`.
+
+### TC 47: AI Inference Latency < 200ms
+- **Logic:** Đo lường thời gian xử lý của Agent đảm bảo trải nghiệm người dùng.
+- **Code:** [agent.orchestrator.ts:159](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L159)
+- **Kết quả:** Log hiển thị `latencyMs < 200`.
+
+### TC 48: Drift Detection (Giám sát dữ liệu)
+- **Logic:** So sánh phân phối dữ liệu đầu vào thực tế với dữ liệu lúc train model.
+- **Vị trí:** Xem tại Monitoring Dashboard (Prometheus/Grafana).
+
+### TC 49: AI Model Fallback (Khi AI sập)
+- **Thực hiện:** Body: `{ "simulate_pricing_timeout": true }`
+- **Logic:** Nếu AI Service không phản hồi -> Booking tự động dùng logic "Tài xế gần nhất" để cứu vãn.
+- **Code:** [booking.controller.ts:271](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L271)
+- **Kết quả:** Log: `AI/Pricing service failure. Using Rule-based Proximity Fallback`.
+
+### TC 50: Xử lý tọa độ bất thường
+- **Body:** `{ "distance_km": 1000 }` (Đi 1000km)
+- **Logic:** Pricing Service từ chối các yêu cầu có tham số phi thực tế.
+- **Code:** [pricing-service/src/index.ts:66](file:///e:/Cab-booking/backend/microservices/pricing-service/src/index.ts#L66)
+- **Kết quả:** `400 Bad Request`.
+
+---
+
+## 🤖 LEVEL 6: AGENTIC AI (TC 51 - TC 60)
+*Mục tiêu: Agent tự chủ và tối ưu đa mục tiêu.*
+
+### TC 51: Ưu tiên Chất lượng (Priority: Quality)
+- **Body:** `{ ..., "priority": "quality" }`
+- **Logic:** Agent tăng trọng số cho Rating (0.7) và giảm trọng số Distance.
+- **Code:** [agent.orchestrator.ts:114](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L114)
+- **Kết quả:** Ưu tiên tài xế 5 sao dù ở xa hơn một chút.
+
+### TC 52: Ưu tiên Tốc độ (Priority: Speed)
+- **Body:** `{ ..., "priority": "speed" }`
+- **Logic:** Agent tăng trọng số cho ETA (0.7) để tài xế đến nhanh nhất.
+- **Code:** [agent.orchestrator.ts:116](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L116)
+- **Kết quả:** Chọn tài xế gần nhất bất kể rating.
+
+### TC 53: Tối ưu đa mục tiêu (Multi-objective Balanced)
+- **Body:** `{ ..., "priority": "balanced" }`
+- **Logic:** Cân bằng giữa Giá, Tốc độ và Chất lượng xe.
+- **Code:** [agent.orchestrator.ts:118](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L118)
+- **Kết quả:** Log: `Multi-objective Balanced Scoring active`.
+
+### TC 54: Agent tự gọi Tool (Tool Calling)
+- **Logic:** Agent tự quyết định gọi Tool Pricing để lấy giá thực tế thay vì dùng giá fix.
+- **Code:** [agent.orchestrator.ts:97](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L97)
+- **Kết quả:** Log: `Agent autonomously called Pricing Tool`.
+
+### TC 55: Xử lý thiếu dữ liệu (Imputation)
+- **Kịch bản:** Một tài xế mới chưa có Rating.
+- **Logic:** Agent tự gán Rating trung bình (4.5) để tài xế vẫn có cơ hội nhận cuốc.
+- **Code:** [agent.orchestrator.ts:123](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L123)
+- **Kết quả:** Tài xế mới vẫn được tham gia Scoring.
+
+### TC 56: Agent Self-Retry (Tự thử lại)
+- **Logic:** Nếu Tool gọi bị lỗi tạm thời, Agent tự thực hiện Retry Exponential.
+- **Code:** [agent.orchestrator.ts:5](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L5)
+- **Kết quả:** Log: `Agent self-retry triggered`.
+
+### TC 57: Loại bỏ tài xế Offline ngay lập tức
+- **Logic:** Trước khi chấm điểm, Agent lọc bỏ các tài xế không còn Online để tránh Match sai.
+- **Code:** [driver.controller.ts:64](file:///e:/Cab-booking/backend/microservices/driver-service/src/controllers/driver.controller.ts#L64)
+- **Kết quả:** `topDrivers` không bao giờ chứa tài xế Offline.
+
+### TC 58: Giải trình lý do (Decision Reasoning)
+- **Logic:** Agent trả về chuỗi văn bản giải thích tại sao tài xế này được chọn.
+- **Code:** [booking.controller.ts:538](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L538)
+- **Kết quả:** JSON có trường `matching_reason` (VD: `[BALANCED] Rating=4.9, ETA=3min...`).
+
+### TC 59: Concurrent Request Handling
+- **Logic:** Hệ thống xử lý hàng loạt request đặt xe đồng thời mà không bị tranh chấp tài xế (Race Condition).
+- **Code:** [booking.controller.ts:222](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L222)
+- **Kết quả:** Log xác nhận Lock hoạt động dưới tải cao.
+
+### TC 60: Rule-based Fallback (Proximity Selection)
+- **Logic:** Khi AI Engine gặp sự cố nghiêm trọng, hệ thống tự động hạ cấp xuống thuật toán "Gần nhất" thuần túy.
+- **Code:** [agent.orchestrator.ts:198](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L198)
+- **Kết quả:** Log: `AI failure, switching to rule-based fallback`.
+
+---
+*Lưu ý: Để xem Log trực tiếp khi test Postman, hãy sử dụng lệnh `docker-compose logs -f`.*
