@@ -357,9 +357,9 @@ Hệ thống sử dụng mô hình **Microservices** với **API Gateway** là c
 - **Kết quả:** `topDrivers` không bao giờ chứa tài xế Offline.
 
 ### TC 58: Giải trình lý do (Decision Reasoning)
-- **Logic:** Agent trả về chuỗi văn bản giải thích tại sao tài xế này được chọn.
-- **Code:** [booking.controller.ts:538](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L538)
-- **Kết quả:** JSON có trường `matching_reason` (VD: `[BALANCED] Rating=4.9, ETA=3min...`).
+- **Logic:** Agent trả về chuỗi văn bản giải thích tại sao tài xế này được chọn dựa trên đa mục tiêu.
+- **Code:** [agent.orchestrator.ts:188](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L188)
+- **Kết quả:** JSON có trường `reasoning` (VD: `[BALANCED] Rating=4.9...`) và `traceId` để truy vết xuyên suốt hệ thống.
 
 ### TC 59: Concurrent Request Handling
 - **Logic:** Hệ thống xử lý hàng loạt request đặt xe đồng thời mà không bị tranh chấp tài xế (Race Condition).
@@ -367,9 +367,9 @@ Hệ thống sử dụng mô hình **Microservices** với **API Gateway** là c
 - **Kết quả:** Log xác nhận Lock hoạt động dưới tải cao.
 
 ### TC 60: Rule-based Fallback (Proximity Selection)
-- **Logic:** Khi AI Engine gặp sự cố nghiêm trọng, hệ thống tự động hạ cấp xuống thuật toán "Gần nhất" thuần túy.
-- **Code:** [agent.orchestrator.ts:198](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L198)
-- **Kết quả:** Log: `AI failure, switching to rule-based fallback`.
+- **Logic:** Khi AI Engine gặp sự cố (Model crash hoặc Force Fallback), hệ thống tự động hạ cấp xuống thuật toán "Gần nhất" thuần túy.
+- **Code:** [agent.orchestrator.ts:205](file:///e:/Cab-booking/backend/microservices/ai-matching-service/src/agent.orchestrator.ts#L205)
+- **Kết quả:** JSON có `isFallback: true`, `method: "PROXIMITY_FALLBACK"` và reasoning ghi rõ `FALLBACK: Using default rule-based...`.
 
 ---
 *Lưu ý: Để xem Log trực tiếp khi test Postman, hãy sử dụng lệnh `docker-compose logs -f`.*

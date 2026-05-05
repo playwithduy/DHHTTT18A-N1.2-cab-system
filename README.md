@@ -60,8 +60,11 @@ Dưới đây là chi tiết 60 Testcases, bao gồm vị trí code và logic qu
 *   **TC57 (Exclusion logic)**:
     *   **Code**: `backend/microservices/driver-service/src/controllers/driver.controller.ts` (Dòng 60).
     *   **Xử lý**: Khi tài xế OFFLINE, lệnh `redis.zRem` sẽ xóa họ khỏi bản đồ tìm kiếm. AI Agent sẽ tự động loại bỏ họ ra khỏi danh sách ứng viên.
-*   **TC58 (Decision Logging)**:
     *   **Mô tả**: Mọi quyết định của AI Agent đều được log đầy đủ kèm theo `traceId` (định danh duy nhất) và `reasoning` chi tiết để phục vụ giải trình (Explainability) và truy vết lỗi xuyên suốt các Microservices.
+*   **TC44 (Top-N Recommendations)**:
+    *   **Logic**: Hệ thống không chỉ trả về 1 người duy nhất mà trả về Top-3 gợi ý tốt nhất (`topDrivers`) để tăng tỉ lệ khớp cuốc (Conversion Rate).
+*   **TC48 (Data Drift Detection)**:
+    *   **Logic**: Tự động phát hiện khi dữ liệu đầu vào (VD: khoảng cách cực lớn 100km) nằm ngoài vùng phân phối thông thường, trả về `driftDetected: true` để cảnh báo model có thể dự đoán sai.
 
 ---
 
