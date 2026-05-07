@@ -93,6 +93,7 @@ export class AIMatchingService {
             
             // Case 23: Calculate real distance instead of hardcoding
             const distance = this.calculateDistance(lat, lng, dLat, dLng);
+            console.log(`[DEBUG-MATCH] Driver ${dId}: Pickup(${lat},${lng}) Driver(${dLat},${dLng}) Dist=${distance.toFixed(2)}km`);
             // Dynamic ETA: AVG_SPEED_FACTOR minutes per km (configurable via env)
             const eta = Math.max(1, Math.ceil(distance * AI_CONFIG.AVG_SPEED_FACTOR));
 
@@ -100,9 +101,9 @@ export class AIMatchingService {
               driverId: dId,
               lat: dLat,
               lng: dLng,
-              rating: parseFloat(features.rating || String(AI_CONFIG.DEFAULT_RATING)),
-              acceptanceRate: parseFloat(features.acceptanceRate || String(AI_CONFIG.DEFAULT_ACCEPTANCE)),
-              totalRides: parseInt(features.totalRides || String(AI_CONFIG.DEFAULT_RIDES)),
+              rating: features.rating ? parseFloat(features.rating) : undefined as any,
+              acceptanceRate: features.acceptanceRate ? parseFloat(features.acceptanceRate) : undefined as any,
+              totalRides: features.totalRides ? parseInt(features.totalRides) : undefined as any,
               vehicleType: features.vehicleType || AI_CONFIG.DEFAULT_VEHICLE,
               distanceKm: parseFloat(distance.toFixed(2)),
               etaMinutes: eta,
@@ -163,9 +164,11 @@ export class AIMatchingService {
       driverId: decision.driverId,
       score:    decision.metrics.score,
       eta:      decision.metrics.eta,
+      price:    decision.metrics.price,
       reasoning: decision.reasoning,
       traceId:   decision.traceId,
       mcp_context: decision.mcpContext,
+      isFallback: decision.isFallback || false,
       drivers:   decision.topDrivers,
       modelVersion: MODEL_VERSION,
       latencyMs
@@ -173,7 +176,27 @@ export class AIMatchingService {
   }
 
   async getForecast(lat: number, lng: number) {
-    return { demand_forecast: (Math.random() * 2 + 1).toFixed(2), timestamp: new Date().toISOString() };
+    let driversCount = 0;
+    try {
+      if (this.redis.isOpen) {
+        const driverIds = await this.redis.geoSearch('drivers:geo', 
+          { latitude: lat, longitude: lng }, 
+          { radius: 10, unit: 'km' }
+        );
+        driversCount = driverIds.length;
+      }
+    } catch (err) {}
+
+    // Simulated demand forecast: inversely proportional to supply, with some randomness
+    const demandBase = 1.5;
+    const supplyImpact = driversCount > 0 ? (1 / driversCount) * 5 : 2;
+    const forecast = (demandBase + supplyImpact + (Math.random() * 0.5)).toFixed(2);
+
+    return { 
+      demand_forecast: forecast, 
+      supply_context: driversCount,
+      timestamp: new Date().toISOString() 
+    };
   }
 }
 
@@ -208,17 +231,17 @@ app.post(['/', '/match'], async (req, res) => {
   const { pickup, vehicleType, distance_km, simulate_fallback, priority } = req.body;
   // Detect outlier distance using configurable threshold
   if (distance_km && distance_km > AI_CONFIG.MAX_DISTANCE_KM) {
-    return res.status(400).json({ success: false, message: `Distance exceeds operational limit of ${AI_CONFIG.MAX_DISTANCE_KM}km` });
+    return res.status(400).json({ success: false, message: `Khoảng cách vượt quá giới hạn hoạt động ${AI_CONFIG.MAX_DISTANCE_KM}km` });
   }
   const result = await matchingService.matchRide(req.body);
-  const isFallback = simulate_fallback === true;
+  const isFallback = result.isFallback || simulate_fallback === true;
   const driftDetected = distance_km && distance_km >= AI_CONFIG.DRIFT_THRESHOLD_KM ? true : false;
 
   // Use reasoning from result if available, or build a basic one
   // Fix reasoning: don't claim success if it failed
   let reasoning = result.success ? (result.reasoning || 'AI matched successfully') : (result.message || 'Matching failed');
   
-  if (isFallback) {
+  if (isFallback && !result.reasoning?.includes('FALLBACK')) {
     reasoning = 'FALLBACK: Using default rule-based driver assignment';
   }
 

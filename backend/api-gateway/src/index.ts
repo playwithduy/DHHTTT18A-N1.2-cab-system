@@ -11,10 +11,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ─── Rate Limiting (TC 67) ───────────────────────────────────
+// ─── Giới hạn tần suất yêu cầu (Trường hợp 67) ───────────────────────────────────
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per window
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 1000, // Giới hạn mỗi IP chỉ được gửi tối đa 1000 yêu cầu trong vòng 15 phút
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -39,7 +39,7 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err.type === 'entity.too.large') {
-    console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 2] TEST 20: SUCCESS - Payload too large caught (413)`);
+    // [TC-20] [Level 20]: Thiết lập rào chắn về độ lớn của thông tin gửi đến (Payload too large).
     return res.status(413).json({ success: false, message: 'Payload too large' });
   }
   next(err);
@@ -59,7 +59,7 @@ const services = {
 
 const GATEWAY_SECRET = process.env.INTERNAL_GATEWAY_SECRET || 'cabgo_internal_secret';
 
-// Robust Proxy Function using Axios
+// Hàm chuyển tiếp yêu cầu mạnh mẽ sử dụng Axios
 const proxyRequest = (serviceUrl: string, stripPrefix?: string) => async (req: Request, res: Response) => {
   const startTime = Date.now();
   try {
@@ -70,7 +70,7 @@ const proxyRequest = (serviceUrl: string, stripPrefix?: string) => async (req: R
 
     console.log(`\x1b[36m[GATEWAY]\x1b[0m ${req.method} ${req.originalUrl} -> \x1b[35m${serviceUrl}${path}\x1b[0m`);
     if (serviceUrl.includes('booking-service')) {
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 29: SUCCESS - Gateway Route successful: ${req.originalUrl} -> Booking Service`);
+      // [TC-29] [Level 29]: Quy trình kiểm tra bản đồ định tuyến (Routing map).
     }
 
     const headers: any = {
@@ -121,7 +121,7 @@ const proxyRequest = (serviceUrl: string, stripPrefix?: string) => async (req: R
   }
 };
 
-// ─── Public Routes (No Auth) ──────────────────────────────────
+// ─── Các đường dẫn công khai (Không cần xác thực) ──────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'api-gateway', version: 'v2.0.0 (Axios-based)' }));
 app.get('/metrics', getMetrics);
 
@@ -130,19 +130,19 @@ app.post('/auth/login', proxyRequest(services.auth));
 
 app.use('/health-booking', proxyRequest(services.booking, '/health-booking'));
 
-// Case 83: JWT Tampering simulation hook
+// Trường hợp 83: Giả lập việc thay đổi nội dung mã JWT trái phép
 app.post('/api/test-tamper', (req, res) => {
   res.status(401).json({ success: false, message: 'Invalid token signature (Tamper detected)' });
 });
 
-// ─── Protected Routes (Auth Required) ───────────────────────────
+// ─── Các đường dẫn được bảo vệ (Yêu cầu xác thực) ───────────────────────────
 app.use(verifyToken);
 app.use(leastPrivilegeCheck);
 app.use(auditLog);
 
-// Admin stats (RBAC) - Proxy to booking service /bookings/stats
+// Thống kê quản trị (Phân quyền) - Chuyển tiếp tới bộ phận đặt xe /bookings/stats
 app.get('/admin/stats', verifyToken, checkRole(['ADMIN']), (req, res) => {
-  req.url = '/bookings/stats'; // Rewrite path for booking service
+  req.url = '/bookings/stats'; // Chỉnh sửa đường dẫn cho dịch vụ đặt xe
   return proxyRequest(services.booking)(req, res);
 });
 
@@ -158,7 +158,7 @@ app.use('/match', proxyRequest(services.aiMatching));
 app.use('/forecast', proxyRequest(services.aiMatching));
 app.use('/fraud', proxyRequest(services.fraud));
 
-// ─── Error Handler ────────────────────────────────────────────
+// ─── Xử lý lỗi tập trung ────────────────────────────────────────────
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status || err.statusCode || 500;
   console.error(`[GATEWAY_ERROR] ${status} - ${err.message}`);

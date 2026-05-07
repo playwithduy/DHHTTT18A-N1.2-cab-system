@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const redis = createClient({ url: REDIS_URL });
 
-redis.on('error', (err) => console.error('[driver-service] Redis Error:', err));
-redis.connect().then(() => console.log(`[driver-service] Connected to Redis for Geo at ${REDIS_URL}`)).catch(err => console.error('[driver-service] Redis connection failed', err));
+redis.on('error', (err) => console.error('[driver-service] Lỗi Redis:', err));
+redis.connect().then(() => console.log(`[driver-service] Đã kết nối Redis cho dữ liệu địa lý tại ${REDIS_URL}`)).catch(err => console.error('[driver-service] Kết nối Redis thất bại', err));
 
 export const updateStatus = async (req: Request, res: Response) => {
   try {
@@ -15,13 +15,13 @@ export const updateStatus = async (req: Request, res: Response) => {
     const { status, location, rating, acceptance_rate, total_rides, vehicle_type } = req.body;
 
     if (!driverId) {
-      return res.status(400).json({ success: false, message: 'driverId is required' });
+      return res.status(400).json({ success: false, message: 'Yêu cầu driverId' });
     }
 
-    // Case 3: Driver must exist in DB — no auto-creation allowed during status update
+    // Trường hợp 3: Người hỗ trợ phải có sẵn trong dữ liệu — không được phép tự động tạo mới khi đang cập nhật trạng thái
     const existing = await prisma.driver.findUnique({ where: { userId: driverId } });
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Driver not found' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài xế' });
     }
 
     const updateData: any = { status };
@@ -37,7 +37,7 @@ export const updateStatus = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    // Sync to Redis for AI Matching (Requirement 23)
+    // Đồng bộ dữ liệu sang Redis để phục vụ việc tìm kiếm thông minh
     // TC5: Tài xế chuyển sang ONLINE
     if (status === 'ONLINE' && location?.lat && location?.lng) {
       await redis.geoAdd('drivers:geo', {
@@ -45,23 +45,23 @@ export const updateStatus = async (req: Request, res: Response) => {
         latitude: location.lat,
         member: driverId
       });
-      // Also store features for scoring (No longer hardcoded!)
+      // Lưu trữ thêm các đặc điểm để tính điểm (Dữ liệu linh hoạt, không còn bị cố định!)
       await redis.hSet(`driver:${driverId}:features`, {
         rating: driver.rating.toString(),
         acceptanceRate: driver.acceptanceRate.toString(),
         totalRides: driver.totalRides.toString(),
         vehicleType: driver.vehicleType
       });
-      // Also store location as hash for AI matcher (Compatibility)
+      // Lưu trữ vị trí dưới dạng mã băm để tương thích với bộ phận tìm kiếm
       await redis.hSet(`driver:${driverId}:location`, {
         lat: location.lat.toString(),
         lng: location.lng.toString()
       });
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 5: SUCCESS - Driver ${driverId} is now ONLINE and synced to Redis Geo`);
+      // [TC-05] [Level 05]: Đồng bộ hóa vị trí và trạng thái sẵn sàng của người hỗ trợ (ONLINE).
     } else if (status === 'OFFLINE') {
       // TC57: Tài xế chuyển sang OFFLINE 
       await redis.zRem('drivers:geo', driverId);
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 6] TEST 57: SUCCESS - Driver ${driverId} is now OFFLINE and removed from Redis Geo`);
+      // [TC-57] [Level 57]: Tự động loại bỏ người hỗ trợ khỏi danh sách tìm kiếm (OFFLINE).
     }
 
     res.status(200).json({
@@ -74,7 +74,7 @@ export const updateStatus = async (req: Request, res: Response) => {
   }
 };
 
-// ── Configurable Driver Parameters (NOT hardcoded) ──────────────
+// ── Các tham số cấu hình linh hoạt (Không bị cố định trong code) ──────────────
 const DRIVER_CONFIG = {
   DEFAULT_LAT: parseFloat(process.env.DEFAULT_CENTER_LAT || '10.76'),   // HCMC center
   DEFAULT_LNG: parseFloat(process.env.DEFAULT_CENTER_LNG || '106.66'),  // HCMC center
@@ -118,12 +118,12 @@ export const registerDriver = async (req: Request, res: Response) => {
   try {
     const { driverId, vehicleModel, vehiclePlate, vehicleType } = req.body;
     if (!driverId) {
-      return res.status(400).json({ success: false, message: 'driverId is required' });
+      return res.status(400).json({ success: false, message: 'Yêu cầu driverId' });
     }
 
     const existing = await prisma.driver.findUnique({ where: { userId: driverId } });
     if (existing) {
-      return res.status(400).json({ success: false, message: 'Driver already exists' });
+      return res.status(400).json({ success: false, message: 'Tài xế đã tồn tại' });
     }
 
     const driver = await prisma.driver.create({
@@ -136,7 +136,7 @@ export const registerDriver = async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json({ success: true, message: 'Driver profile created', data: driver });
+    res.status(201).json({ success: true, message: 'Đã tạo hồ sơ tài xế', data: driver });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

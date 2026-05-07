@@ -81,6 +81,30 @@ const DRIVERS = [
     totalRides:    999,
     vehicleType:   'car',
   },
+  {
+    userId:        'DRV004',
+    vehicleModel:  'Mercedes E200',
+    vehiclePlate:  '51G-004',
+    status:        'ONLINE',
+    currentLat:    PICKUP_LAT + latOffset(6.23), // ~6.23km offset
+    currentLng:    PICKUP_LNG,
+    rating:        4.8,
+    acceptanceRate: 0.8,
+    totalRides:    450,
+    vehicleType:   'car',
+  },
+  {
+    userId:        'DRV005',
+    vehicleModel:  'Tesla Model 3',
+    vehiclePlate:  '51H-005',
+    status:        'ONLINE',
+    currentLat:    PICKUP_LAT, // Right at pickup for 1min ETA
+    currentLng:    PICKUP_LNG,
+    rating:        4.3,
+    acceptanceRate: 0.75,
+    totalRides:    300,
+    vehicleType:   'car',
+  },
 ];
 
 async function main() {

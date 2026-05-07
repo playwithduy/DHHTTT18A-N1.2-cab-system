@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import client from 'prom-client';
 
-// Initialize default node metrics (CPU, Memory Event Loop, etc - Item 120)
+// Khởi tạo các chỉ số mặc định cho Node.js (CPU, Bộ nhớ, Vòng lặp sự kiện, v.v. - Mục 120)
 client.collectDefaultMetrics({ prefix: 'cabgo_gateway_' });
 
 export const httpRequestCounter = new client.Counter({
@@ -14,7 +14,7 @@ export const httpLatencyHistogram = new client.Histogram({
   name: 'cabgo_http_request_duration_seconds',
   help: 'Duration of HTTP requests in seconds (Item 113)',
   labelNames: ['method', 'route', 'status_code'],
-  buckets: [0.1, 0.3, 0.5, 1, 1.5, 3] // latency buckets in s
+  buckets: [0.1, 0.3, 0.5, 1, 1.5, 3] // Các ngưỡng thời gian trễ tính bằng giây
 });
 
 export const metricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -27,7 +27,8 @@ export const metricsMiddleware = (req: Request, res: Response, next: NextFunctio
     const duration = end({ method: req.method, route: req.route ? req.route.path : req.path, status_code: res.statusCode.toString() });
     httpRequestCounter.labels(req.method, req.route ? req.route.path : req.path, res.statusCode.toString()).inc();
 
-    // Step 116, 117: Simulated Alerting
+    // [TC-48] [Level 48]: Hệ thống tự động ghi nhận các chỉ số về chất lượng thông tin.
+    // Bước 116, 117: Giả lập cơ chế cảnh báo
     if (duration > 0.5) {
       console.warn(JSON.stringify({
         timestamp: new Date().toISOString(),

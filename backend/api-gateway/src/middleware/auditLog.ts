@@ -8,7 +8,7 @@ export const auditLog = (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user as DecodedToken;
     const duration = Date.now() - start;
     
-    // Construct Security Trace
+    // Khởi tạo Nhật ký Bảo mật (Security Trace)
     const trace = {
       timestamp: new Date().toISOString(),
       user_id: user?.userId || 'anonymous',

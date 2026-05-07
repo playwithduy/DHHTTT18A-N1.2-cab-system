@@ -1,6 +1,4 @@
-// ============================================================
-// Pricing Service — Fare Calculation & Surge Pricing
-// ============================================================
+// Dịch vụ Tính giá — Tính toán mức phí và điều chỉnh linh hoạt
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -12,7 +10,7 @@ app.use(express.json());
 
 const MODEL_VERSION = process.env.PRICING_MODEL_VERSION || 'v2.1.0-surge';
 
-// ── Configurable Pricing Parameters (read from env, NOT hardcoded) ─────
+// ── Các tham số cấu hình mức phí (Đọc từ môi trường, không bị cố định) ─────
 const MAX_SURGE_CAP = parseFloat(process.env.MAX_SURGE_CAP || '3.0');
 const MAX_DISTANCE_KM = parseInt(process.env.MAX_DISTANCE_KM || '1000');
 
@@ -26,21 +24,31 @@ const VEHICLE_PRICING: Record<string, { baseFare: number; perKmRate: number }> =
 function calculateFare(distance_km: number, demand_index: number, supply_index: number, vehicle_type: string) {
   const demand = Math.max(0, demand_index);
   if (demand_index === 0) {
-    console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 2] TEST 16: INFO - Demand Index is 0. Base Fare logic ensures price is never 0.`);
+    // [TC-16] [Level 16]: Duy trì một mức phí sàn cố định để đảm bảo quyền lợi tối thiểu cho người hỗ trợ.
   }
+  // Quy tắc tính toán mức đóng góp linh hoạt:
+  // 1. Phân tích sự cân bằng: Lấy mức độ người cần dịch vụ (demand) chia cho số lượng người hỗ trợ sẵn sàng (supply).
+  // 2. Xử lý tình huống đặc biệt: Nếu không có người hỗ trợ, hệ thống tự động gán một giá trị nhỏ nhất để tránh lỗi chia cho 0.
   const supply = Math.max(0.1, supply_index);
   
-  // Case 42: Pricing model surge logic (MAX_SURGE_CAP configurable via env)
+  // 3. Cơ chế điều chỉnh (Surge): 
+  // - Nếu nhu cầu cao hơn nguồn cung, hệ thống sẽ tự động nhân thêm một hệ số để khuyến khích nhiều người hỗ trợ tham gia vào khu vực đó.
+  // - Hệ số này luôn tối thiểu là 1.0 (không giảm giá dưới mức cơ bản khi nhu cầu thấp).
   let surge = demand / supply;
   if (surge < 1.0 || isNaN(surge)) surge = 1.0;
   if (surge > MAX_SURGE_CAP) {
-    console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 5] TEST 42: INFO - Surge Multiplier capped at ${MAX_SURGE_CAP} due to high demand.`);
+    // 4. Cơ chế bảo vệ người dùng: Giới hạn hệ số nhân ở một mức tối đa (ví dụ 3.0) để đảm bảo chi phí không vượt quá khả năng chi trả ngay cả khi cực kỳ khan hiếm người hỗ trợ.
+    // [TC-42] [Level 42]: Tự động điều chỉnh mức đóng góp theo cơ chế linh hoạt khi nhu cầu sử dụng tại một khu vực tăng đột biến.
     surge = MAX_SURGE_CAP; // Configurable max surge cap
   }
 
   const pricing = VEHICLE_PRICING[vehicle_type] ?? VEHICLE_PRICING['car'];
   const { baseFare, perKmRate } = pricing;
 
+  // 5. Cấu trúc chi phí theo quãng đường:
+  // - Giai đoạn khởi đầu (Dưới 2km): Áp dụng mức phí mở cửa cố định để đảm bảo chi phí vận hành cho những chuyến đi ngắn.
+  // - Giai đoạn di chuyển dài (Trên 2km): Tính theo công thức: Phí mở cửa + (Số km vượt dư * Đơn giá mỗi km tiếp theo).
+  // 6. Tổng kết: Toàn bộ số tiền cuối cùng sẽ được nhân với hệ số điều chỉnh linh hoạt (Surge) đã tính ở trên.
   let fare: number;
   if (distance_km <= 2) {
     fare = baseFare * surge;
@@ -55,16 +63,16 @@ app.post(['/', '/price', '/pricing'], (req, res) => {
   const { distance_km, demand_index = 1.0, supply_index = 1.0, vehicle_type = 'car', simulate_timeout = false } = req.body;
   
   if (simulate_timeout === true) {
-    console.log('[pricing-service] Simulating timeout...');
+    console.log('[pricing-service] Đang giả lập hết thời gian chờ (timeout)...');
     return; 
   }
 
-  if (distance_km === undefined) return res.status(400).json({ success: false, message: 'distance_km is required' });
+  if (distance_km === undefined) return res.status(400).json({ success: false, message: 'Yêu cầu distance_km' });
 
   // Case 50: Abnormal Input (distance > configurable max)
   if (distance_km > MAX_DISTANCE_KM) {
-    console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 5] TEST 50: SUCCESS - Abnormal distance (${distance_km}km) rejected.`);
-    return res.status(400).json({ success: false, message: 'Distance exceeds operational limit', modelVersion: MODEL_VERSION });
+    // [TC-50] [Level 50]: Hệ thống tự động nhận diện và từ chối các yêu cầu có thông số bất thường như quãng đường quá dài.
+    return res.status(400).json({ success: false, message: 'Khoảng cách vượt quá giới hạn hoạt động', modelVersion: MODEL_VERSION });
   }
 
   const result = calculateFare(distance_km, demand_index, supply_index, vehicle_type);
@@ -86,14 +94,24 @@ app.post(['/', '/price', '/pricing'], (req, res) => {
   });
 });
 
+const VEHICLE_DISPLAY_INFO: Record<string, { name: string; icon: string }> = {
+  bike:    { name: 'CabGo Bike',    icon: 'Bike' },
+  car:     { name: 'CabGo Car',     icon: 'Car'  },
+  premium: { name: 'CabGo Premium', icon: 'Star' },
+  xl:      { name: 'CabGo XL',      icon: 'Grid' },
+};
+
 app.get('/vehicles', (_req, res) => {
-  const vehicles = Object.entries(VEHICLE_PRICING).map(([type, pricing]) => ({
-    type,
-    name: type === 'bike' ? 'CabGo Bike' : type === 'car' ? 'CabGo Car' : type === 'premium' ? 'CabGo Premium' : 'CabGo XL',
-    base_fare: pricing.baseFare,
-    per_km_rate: pricing.perKmRate,
-    icon: type === 'bike' ? 'Bike' : type === 'car' ? 'Car' : type === 'premium' ? 'Star' : 'Grid'
-  }));
+  const vehicles = Object.entries(VEHICLE_PRICING).map(([type, pricing]) => {
+    const info = VEHICLE_DISPLAY_INFO[type] || { name: `CabGo ${type.toUpperCase()}`, icon: 'Car' };
+    return {
+      type,
+      name: info.name,
+      base_fare: pricing.baseFare,
+      per_km_rate: pricing.perKmRate,
+      icon: info.icon
+    };
+  });
   res.json({ success: true, data: vehicles });
 });
 

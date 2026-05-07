@@ -1,6 +1,4 @@
-// ============================================================
-// Payment Service — Stripe + Retry Logic (Sequence 9.5)
-// ============================================================
+// Dịch vụ Thanh toán — Stripe + Logic thử lại (Trình tự 9.5)
 import Stripe from 'stripe';
 import { Kafka, Producer, Consumer } from 'kafkajs';
 import { PrismaClient } from '@prisma/client';
@@ -11,22 +9,22 @@ const stripe   = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholde
 const prisma   = new PrismaClient();
 
 const MAX_RETRIES      = 3;
-const RETRY_DELAYS_MS  = [5000, 15000, 30000]; // exponential backoff
+const RETRY_DELAYS_MS  = [5000, 15000, 30000]; // thời gian chờ tăng dần (exponential backoff)
 
 // ─── Kafka ────────────────────────────────────────────────────
 const kafka    = new Kafka({ clientId: 'payment-service', brokers: (process.env.KAFKA_BROKERS || '127.0.0.1:9092').split(','), retry: { retries: 0 } });
 const producer: Producer = kafka.producer();
 const consumer: Consumer = kafka.consumer({ groupId: 'payment-service-group' });
 
-// ─── Payment Processor ────────────────────────────────────────
+// ─── Bộ xử lý Thanh toán ────────────────────────────────────────
 async function processPayment(bookingId: string, amount: number, stripeCustomerId?: string): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`[payment] Attempt ${attempt}/${MAX_RETRIES} for booking ${bookingId}`);
+      console.log(`[Thanh toán] Lần thử ${attempt}/${MAX_RETRIES} cho hành trình ${bookingId}`);
 
-      // Create PaymentIntent
+      // Khởi tạo ý định thanh toán (PaymentIntent)
       const intent = await stripe.paymentIntents.create({
         amount:   Math.round(amount), // amount in smallest currency unit
         currency: 'vnd',
@@ -37,7 +35,7 @@ async function processPayment(bookingId: string, amount: number, stripeCustomerI
       });
 
       if (intent.status === 'succeeded') {
-        // Update DB
+        // Cập nhật Cơ sở dữ liệu
         await prisma.payment.upsert({
           where:  { bookingId },
           update: { status: 'SUCCESS', stripeIntentId: intent.id, paidAt: new Date() },
@@ -51,7 +49,7 @@ async function processPayment(bookingId: string, amount: number, stripeCustomerI
           },
         });
 
-        // Publish success
+        // Phát đi thông báo thành công
         await producer.send({
           topic: 'payment.completed',
           messages: [{
@@ -60,18 +58,18 @@ async function processPayment(bookingId: string, amount: number, stripeCustomerI
           }],
         });
 
-        console.log(`[payment] ✅ Booking ${bookingId} payment succeeded`);
-        return; // Success — exit retry loop
+        console.log(`[Thanh toán] ✅ Thanh toán cho hành trình ${bookingId} thành công`);
+        return; // Thành công — thoát vòng lặp thử lại
       }
 
       throw new Error(`Payment status: ${intent.status}`);
 
     } catch (err: any) {
       lastError = err;
-      console.error(`[payment] ❌ Attempt ${attempt} failed: ${err.message}`);
+      console.error(`[Thanh toán] ❌ Lần thử ${attempt} thất bại: ${err.message}`);
 
       if (attempt < MAX_RETRIES) {
-        // Publish retry event
+        // Phát đi thông báo đang thử lại
         await producer.send({
           topic: 'payment.retrying',
           messages: [{
@@ -80,14 +78,14 @@ async function processPayment(bookingId: string, amount: number, stripeCustomerI
           }],
         });
 
-        // Wait before retry (exponential backoff)
+        // Chờ trước khi thử lại (thời gian chờ tăng dần)
         await new Promise(r => setTimeout(r, RETRY_DELAYS_MS[attempt - 1]));
       }
     }
   }
 
-  // All retries exhausted
-  console.error(`[payment] 💀 Booking ${bookingId} payment retry exhausted`);
+  // Đã hết số lần thử lại cho phép
+  console.error(`[Thanh toán] 💀 Đã hết lượt thử lại thanh toán cho hành trình ${bookingId}`);
 
   await prisma.payment.upsert({
     where:  { bookingId },
@@ -102,7 +100,7 @@ async function processPayment(bookingId: string, amount: number, stripeCustomerI
     },
   });
 
-  // Publish retry exhausted
+  // Phát đi thông báo đã hết lượt thử lại
   await producer.send({
     topic: 'payment.retry_exhausted',
     messages: [{
@@ -112,7 +110,7 @@ async function processPayment(bookingId: string, amount: number, stripeCustomerI
   });
 }
 
-// ─── Kafka Consumer ───────────────────────────────────────────
+// ─── Bộ tiếp nhận Kafka ───────────────────────────────────────────
 async function startConsumer() {
   try {
     await producer.connect();
@@ -129,20 +127,20 @@ async function startConsumer() {
           return;
         }
 
-        // Fetch Stripe customer ID if exists
+        // Lấy mã khách hàng Stripe nếu có
         const user = await prisma.user.findUnique({ where: { id: customerId }, select: { stripeCustomerId: true } });
         await processPayment(bookingId, fare.total, user?.stripeCustomerId || undefined);
       },
     });
 
-    console.log('[payment-service] Consumer running, waiting for ride.completed events...');
+    console.log('[payment-service] Bộ tiếp nhận đang chạy, chờ sự kiện hoàn tất hành trình (ride.completed)...');
   } catch (err: any) {
     console.error('[payment-service] Kafka connect skipped (dev/mock mode):', err.message);
     // DO NOT process.exit(1) here so the HTTP API can still work
   }
 }
 
-// ─── HTTP API ──────────────────────────────────────────────────
+// ─── Cổng giao tiếp HTTP ──────────────────────────────────────────────────
 import express, { Request, Response } from 'express';
 import { requireGateway } from './middleware/gatewayCheck';
 import { metricsMiddleware, getMetrics } from './middleware/metrics';
@@ -151,7 +149,7 @@ import morgan from 'morgan';
 const app = express();
 app.use(express.json());
 
-// Step 112, 113: Monitoring Metadata
+// Bước 112, 113: Siêu dữ liệu giám sát (Monitoring Metadata)
 app.use(metricsMiddleware);
 app.use(morgan((tokens, req, res) => {
   return JSON.stringify({
@@ -170,58 +168,58 @@ app.use(requireGateway);
 
 app.get('/metrics', getMetrics);
 
-// POST /payments — Saga Integration (Point 33, 36)
+// Ghi nhận thanh toán — Tích hợp mô hình Saga (Mục 33, 36)
 app.post('/payments', async (req: Request, res: Response) => {
   const { bookingId, amount, userId, simulate_failure, simulate_timeout } = req.body;
 
   if (simulate_timeout === true) {
     console.log(`[payment] Simulating timeout for booking ${bookingId}`);
-    return; // Will timeout
+    return; // Sẽ bị quá hạn (timeout)
   }
 
-  // Simulate Network Latency (Always delay to show microservices flow)
+  // Giả lập độ trễ mạng (Luôn trì hoãn để minh họa luồng hoạt động microservices)
   await new Promise(r => setTimeout(r, 800));
 
   if (simulate_failure === true) {
     console.log(`[payment] Simulated failure for booking ${bookingId}`);
-    return res.status(400).json({ success: false, message: 'Simulated payment failure' });
+    return res.status(400).json({ success: false, message: 'Giả lập thanh toán thất bại' });
   }
 
   try {
-    // 1. Idempotency Check (Point 34)
+    // 1. Kiểm tra trùng lặp (Idempotency Check - Mục 34)
     const existing = await prisma.payment.findUnique({ where: { bookingId } });
     if (existing) {
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 34: SUCCESS - Idempotent Charge: Payment already exists for booking ${bookingId}`);
-      return res.json({ success: true, data: existing, message: 'Idempotency hit' });
+      // [TC-34] [Level 34]: Cơ chế rà soát hồ sơ thanh toán (Idempotency Check).
+      return res.json({ success: true, data: existing, message: 'Đã trùng lặp request (Idempotency hit)' });
     }
 
-    // Use provided card number or default to empty if not testing
+    // Sử dụng số thẻ được cung cấp hoặc để trống nếu không phải kiểm thử
     const rawCardNumber = req.body.cardNumber;
     if (!rawCardNumber && req.body.paymentMethod === 'CARD') {
-      return res.status(400).json({ success: false, message: 'Card number is required' });
+      return res.status(400).json({ success: false, message: 'Yêu cầu số thẻ' });
     }
     const safeCardNumber = rawCardNumber || 'CASH_OR_WALLET_TX';
     const encryptedCard = encrypt(safeCardNumber);
     
-    // Simulate Network Latency
+    // Giả lập độ trễ mạng
     await new Promise(r => setTimeout(r, 800));
 
     let stripeIntentId = `pi_${Math.random().toString(36).substr(2, 15)}`;
     let status = 'SUCCESS';
     let errorMessage = null;
 
-    // Simulation Triggers
+    // Các kích hoạt giả lập (Simulation Triggers)
     if (rawCardNumber === 'declined') {
       return res.status(402).json({ 
         success: false, 
-        message: 'Your card was declined. (Simulated Error)',
+        message: 'Thẻ của bạn bị từ chối. (Lỗi giả lập)',
         code: 'card_declined'
       });
     }
     if (rawCardNumber === 'expired') {
       return res.status(402).json({ 
         success: false, 
-        message: 'Your card has expired. (Simulated Error)',
+        message: 'Thẻ của bạn đã hết hạn. (Lỗi giả lập)',
         code: 'expired_card'
       });
     }
@@ -242,7 +240,7 @@ app.post('/payments', async (req: Request, res: Response) => {
 
     res.status(201).json({ 
       success: true, 
-      message: 'Payment processed successfully (Simulated)',
+      message: 'Thanh toán được xử lý thành công (Giả lập)',
       data: payment 
     });
   } catch (err: any) {
@@ -254,9 +252,9 @@ app.post('/payments', async (req: Request, res: Response) => {
 // GET /payments/:id
 app.get('/payments/:id', async (req, res) => {
   const payment = await prisma.payment.findUnique({ where: { bookingId: req.params.id } });
-  if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+  if (!payment) return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin thanh toán' });
   
-  // Mask data (Case 90)
+  // Che giấu dữ liệu (Trường hợp 90)
   const maskedPayment = {
     ...payment,
     cardNumber: payment.failureReason ? maskData(decrypt(payment.failureReason)) : '****'
@@ -270,7 +268,7 @@ app.post('/payments/:id/refund', async (req, res) => {
   try {
     const payment = await prisma.payment.findUnique({ where: { bookingId: req.params.id } });
     if (!payment || payment.status !== 'SUCCESS') {
-      return res.status(400).json({ success: false, message: 'Cannot refund this payment' });
+      return res.status(400).json({ success: false, message: 'Không thể hoàn tiền cho giao dịch này' });
     }
 
     const refund = await stripe.refunds.create({ payment_intent: payment.stripeIntentId! });
@@ -282,11 +280,11 @@ app.post('/payments/:id/refund', async (req, res) => {
   }
 });
 
-// Step 87: Audit endpoint to verify encryption at rest
+// Bước 87: Cổng kiểm tra tính bảo mật của dữ liệu khi lưu trữ (Audit endpoint)
 app.get('/internal/db-audit/:bookingId', async (req, res) => {
   const { bookingId } = req.params;
   const payment = await prisma.payment.findUnique({ where: { bookingId } });
-  if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+  if (!payment) return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin thanh toán' });
   
   res.json({
     success: true,

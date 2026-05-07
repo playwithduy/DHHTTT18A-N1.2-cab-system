@@ -20,7 +20,7 @@ export const leastPrivilegeCheck = (req: Request, res: Response, next: NextFunct
   const user = (req as any).user as DecodedToken;
   if (!user) return next();
 
-  // If a driver or user fetches /users/:id, the ID must belong to them (unless they are ADMIN)
+  // Nếu người hỗ trợ hoặc người dùng truy cập /users/:id, mã ID phải thuộc về chính họ (trừ khi họ là QUẢN TRỊ VIÊN)
   if (req.path.startsWith('/users/')) {
     const targetId = req.path.split('/')[2];
     if (user.role !== 'ADMIN' && targetId && targetId !== (user as any).sub) {

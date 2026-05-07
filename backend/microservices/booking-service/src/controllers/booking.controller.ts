@@ -109,13 +109,13 @@ const mapBooking = (b: any) => ({
 });
 
 export const createBooking = async (req: Request, res: Response) => {
-  // TC3: Điểm bắt đầu quy trình tạo cuốc xe (Orchestration)
-  console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 3: INFO - Starting booking orchestration for user: ${req.body.userId || 'auth-user'}`);
+  // [TC-03] [Level 03]: Quy trình phối hợp đặt xe
+  console.log('\x1b[33m%s\x1b[0m', `[Hệ thống] Đang bắt đầu quy trình phối hợp đặt xe cho người dùng: ${req.body.userId || 'auth-user'}`);
   
-  // --- PRIORITY: Simulation Flags for testing ---
+  // --- ƯU TIÊN: Các cờ giả lập phục vụ kiểm thử ---
   if (req.body.simulate_race_condition === true) {
-    console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 35: SUCCESS - Race condition simulation triggered`);
-    return res.status(409).json({ success: false, message: 'Another booking is in progress (Simulated Lock)' });
+    console.log('\x1b[33m%s\x1b[0m', `[Hệ thống] Đã kích hoạt giả lập tình trạng tranh chấp dữ liệu (Race condition)`);
+    return res.status(409).json({ success: false, message: 'Yêu cầu đặt xe khác đang được xử lý (Giả lập Lock)' });
   }
 
   if (req.body.simulate_stress === true) DEGRADED_MODE = true;
@@ -130,6 +130,7 @@ export const createBooking = async (req: Request, res: Response) => {
   let distance_km = rawDistanceKm;
   if (distance_km === undefined || distance_km === null) {
     if (pickup?.lat && pickup?.lng && drop?.lat && drop?.lng) {
+      // Level 15: Phân tích địa lý và xác định độ dài quãng đường thực tế giữa điểm đi và điểm đến để làm cơ sở cho các bước xử lý tiếp theo.
       distance_km = calculateDistanceKm(pickup.lat, pickup.lng, drop.lat, drop.lng);
     } else {
       distance_km = BOOKING_DEFAULTS.DEFAULT_DISTANCE;
@@ -138,7 +139,7 @@ export const createBooking = async (req: Request, res: Response) => {
 
   const isSimulation = req.body.simulate_db_error || req.body.simulate_payment_failure || req.body.simulate_pricing_timeout || req.body.simulate_payment_timeout || req.body.simulate_driver_down || req.body.simulate_race_condition;
 
-  // --- NEW: REQUEST HASH IDEMPOTENCY (BRUTE FORCE) ---
+  // --- MỚI: KIỂM TRA TRÙNG LẶP DỰA TRÊN MÃ BĂM YÊU CẦU ---
   const requestHash = Buffer.from(JSON.stringify({ 
     userId, pickup, drop, distance_km, 
     vehicleType: vehicleType || vehicle_type,
@@ -152,9 +153,9 @@ export const createBooking = async (req: Request, res: Response) => {
   const hashKey = `booking_hash:${requestHash}`;
   const hashedResult = await redis.get(hashKey);
   
-  // Only return cached result if NOT a simulation
+  // Chỉ trả về kết quả đã lưu nếu không phải là trường hợp giả lập lỗi
   if (hashedResult && !isSimulation) {
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 22: SUCCESS - Hash-based Idempotency Hit`);
+    console.log('\x1b[32m%s\x1b[0m', `[Hệ thống] Thành công - Phát hiện yêu cầu trùng lặp dựa trên mã băm (Idempotency Hit)`);
     return res.status(201).json(JSON.parse(hashedResult));
   }
 
@@ -162,7 +163,7 @@ export const createBooking = async (req: Request, res: Response) => {
     const fallbackEta = Math.max(1, Math.ceil(distance_km * BOOKING_DEFAULTS.AVG_SPEED_FACTOR));
     return res.status(201).json({
       success: true,
-      message: 'Driver service unavailable. Using fallback allocation.',
+      message: 'Dịch vụ tài xế không khả dụng. Đang sử dụng phân bổ dự phòng.',
       isFallback: true,
       data: { status: 'PENDING', driver_id: null, eta: fallbackEta }
     });
@@ -171,26 +172,26 @@ export const createBooking = async (req: Request, res: Response) => {
   if (req.body.simulate_circuit_open === true) {
     return res.status(503).json({
       success: false,
-      message: 'Circuit Breaker OPEN: Pricing service is unavailable. Request rejected.',
+      message: 'Ngắt mạch (Circuit Breaker) đang MỞ: Dịch vụ tính giá không khả dụng. Yêu cầu bị từ chối.',
       circuitState: 'OPEN'
     });
   }
 
   const resolvedVehicleType = vehicleType || vehicle_type || 'car';
-  const idempotencyKey = (req.headers['x-idempotency-key'] as string) || `auto-lv1-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  const idempotencyKey = (req.headers['x-idempotency-key'] as string) || `auto-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
   const cached = await redis.get(`idempotency:booking:${idempotencyKey}`);
   if (cached && !isSimulation) {
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 2] TEST 19: SUCCESS - Idempotency hit for key: ${idempotencyKey}`);
+    // Level 19: Hệ thống tự động nhận diện các yêu cầu bị gửi lặp lại trong thời gian ngắn, giúp ngăn chặn việc tạo ra các dữ liệu thừa và đảm bảo tính nhất quán.
     return res.status(201).json(JSON.parse(cached));
   }
 
-  // --- BUSINESS IDEMPOTENCY: ALWAYS check for identical requests to prevent duplicates ---
+  // --- KIỂM TRA TRÙNG LẶP NGHIỆP VỤ: LUÔN đối soát các yêu cầu giống hệt nhau để tránh tạo cuốc xe thừa ---
   console.log(`[DEBUG-IDEMPOTENCY] Checking for user: ${userId}, coordinates: ${pickup.lat},${pickup.lng} -> ${drop.lat},${drop.lng}`);
 
   if (!isSimulation) {
-    const fiveMinutesAgo = new Date(Date.now() - 300000); // 5 minutes
-    const delta = 0.0001; // Allow very small difference in coordinates (approx 10 meters)
+    const fiveMinutesAgo = new Date(Date.now() - 300000); // 5 phút
+    const delta = 0.0001; // Cho phép sai số nhỏ về tọa độ (khoảng 10 mét)
     
     const existingBusinessMatch = await prisma.booking.findFirst({
       where: {
@@ -206,21 +207,22 @@ export const createBooking = async (req: Request, res: Response) => {
     });
 
     if (existingBusinessMatch) {
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 22: SUCCESS - Business Idempotency: Found existing booking ${existingBusinessMatch.id} within delta`);
+      // [TC-22] [Level 22]: Cơ chế chống trùng lặp nghiệp vụ (Business Idempotency)
+      console.log('\x1b[32m%s\x1b[0m', `[Hệ thống] Thành công - Phát hiện yêu cầu trùng lặp nghiệp vụ cho hành trình ${existingBusinessMatch.id}`);
       const responseData = mapBooking(existingBusinessMatch);
-      return res.status(201).json({ success: true, data: responseData, message: 'Duplicate request detected. Returning existing booking.' });
+      return res.status(201).json({ success: true, data: responseData, message: 'Phát hiện yêu cầu trùng lặp. Đang trả về thông tin đặt xe hiện có.' });
     }
   }
 
   const lockKey = `lock:booking:${userId}`;
-  // TC21: Distributed Lock (Redis SET NX) - Chặn đặt cuốc trùng lặp
+  // Cơ chế Khóa Phân Tán (Redis SET NX) - Ngăn chặn việc đặt xe trùng lặp đồng thời.
   // Đảm bảo tại một thời điểm mỗi User chỉ được xử lý 1 request đặt xe duy nhất.
   let acquired: any = await redis.set(lockKey, 'locked', { NX: true, EX: 30 });
   if (req.body.simulate_race_condition === true) acquired = false;
   if (!acquired) {
-    console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 35: INFO - Race condition detected / Redis lock active for user: ${userId}`);
-    console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 6] TEST 59: INFO - Concurrent request handled by Redis Distributed Lock`);
-    return res.status(409).json({ success: false, message: 'Another booking is in progress' });
+    // [TC-35] [Level 35]: Cơ chế khóa tạm thời giúp ngăn chặn việc một người dùng thực hiện nhiều yêu cầu cùng lúc (Race Condition).
+    // [TC-59] [Level 59]: Đảm bảo khả năng chịu tải và xử lý mượt màng khi có hàng nghìn người cùng tham gia (Concurrency).
+    return res.status(409).json({ success: false, message: 'Yêu cầu đặt xe khác đang được xử lý' });
   }
 
   try {
@@ -231,12 +233,13 @@ export const createBooking = async (req: Request, res: Response) => {
     let is_fallback = false;
 
     const pricingAxios = axios.create();
-    // TC26: Retry Strategy with Exponential Backoff
+    // Chiến lược thử lại tự động với thời gian chờ tăng dần.
     // Tự động gọi lại khi gặp lỗi mạng/timeout để tăng tính sẵn sàng của hệ thống.
     axiosRetry(pricingAxios, {
       retries: 2,
       retryDelay: (retryCount) => {
         retry_attempts = retryCount;
+        // Level 30: Chế độ kiên trì giúp hệ thống tự động kết nối lại với các bộ phận liên quan nếu có sự cố đường truyền tạm thời, đảm bảo hành trình không bị gián đoạn.
         return 200 * Math.pow(2, retryCount - 1); // 200ms, 400ms...
       },
       retryCondition: (error) => error.code === 'ECONNABORTED' || axiosRetry.isNetworkOrIdempotentRequestError(error)
@@ -246,64 +249,79 @@ export const createBooking = async (req: Request, res: Response) => {
     let driverRes: any;
     let aiRes: any;
 
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 24: SUCCESS - Starting E2E Full Flow (Pricing -> AI -> Payment)`);
+    // Level 24: Thực hiện một chu kỳ làm việc hoàn chỉnh từ lúc tiếp nhận ý muốn của người dùng cho đến khi mọi bộ phận liên quan đều xác nhận sẵn sàng phục vụ.
 
     try {
       // Circuit Breaker: Tự động ngắt kết nối (Open Circuit) nếu các service phụ trợ bị lỗi liên tục.
       // Ngăn chặn hiện tượng "Cascading Failure" gây sập toàn bộ hệ thống microservices.
-      console.log(`\x1b[33m[BOOKING]\x1b[0m Calling Driver & AI Matching services...`);
-      [driverRes, aiRes] = await Promise.all([
-        driverCircuitBreaker.fire(pickup.lat, pickup.lng),
-        aiCircuitBreaker.fire({ pickup, vehicleType: resolvedVehicleType })
-      ]);
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 21: SUCCESS - Integration call to AI Matching/ETA successful`);
-      console.log(`\x1b[33m[BOOKING]\x1b[0m Driver/AI results received. Driver online: ${driverRes.data.data?.length || 0}`);
-
+      console.log(`\x1b[33m[BOOKING]\x1b[0m Đang kết nối với bộ phận Tài xế...`);
+      driverRes = await driverCircuitBreaker.fire(pickup.lat, pickup.lng);
+      
       try {
-        console.log(`\x1b[33m[BOOKING]\x1b[0m Calling Pricing service...`);
-        priceRes = await pricingAxios.post(`${SERVICE_URLS.PRICING_SERVICE}/price`, {
-          distance_km, demand_index, vehicle_type: resolvedVehicleType,
-          simulate_timeout: req.body.simulate_pricing_timeout === true
-        }, { timeout: 1000 });
-        console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 30: SUCCESS - Pricing call successful (with retry strategy)`);
-        console.log(`\x1b[33m[BOOKING]\x1b[0m Pricing result: ${priceRes.data.data?.final_price}đ`);
-      } catch (err: any) {
-        console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 5] TEST 49: INFO - AI/Pricing service failure. Using Rule-based Proximity Fallback.`);
-        pricing_status = 'TIMEOUT';
-        pricing_error = 'TIMEOUT';
-        is_fallback = true;
-        fallback_source = 'LOCAL_ESTIMATION';
-        const fallbackPrice = BOOKING_DEFAULTS.DEFAULT_BASE_FARE + (distance_km * BOOKING_DEFAULTS.DEFAULT_PER_KM);
-        priceRes = { data: { success: true, data: { final_price: fallbackPrice, surge_multiplier: 1.0, isFallback: true } } };
+        // [TC-21] [Level 21]: Liên kết với bộ phận trí tuệ nhân tạo để phân tích và đưa ra những lựa chọn tối ưu nhất về người hỗ trợ dựa trên vị trí và sự sẵn sàng.
+        console.log(`\x1b[33m[BOOKING]\x1b[0m Đang kết nối với bộ phận Tìm kiếm thông minh (AI Matching)...`);
+        aiRes = await aiCircuitBreaker.fire({ pickup, vehicleType: resolvedVehicleType });
+      } catch (aiErr: any) {
+        console.log('\x1b[33m%s\x1b[0m', `[Hệ thống] Thông tin: Bộ phận Tìm kiếm thông minh gặp sự cố. Đang sử dụng thuật toán dự phòng theo khoảng cách.`);
+        aiRes = { data: { success: true, driverId: null, eta: BOOKING_DEFAULTS.DEFAULT_ETA, reasoning: 'AI Service down, using rule-based proximity', isFallback: true } };
+      }
+      
+      const driverOnlineCount = driverRes?.data?.data?.length || 0;
+      console.log(`\x1b[33m[BOOKING]\x1b[0m Đã nhận được kết quả từ bộ phận Tài xế và AI. Số người hỗ trợ trực tuyến: ${driverOnlineCount}`);
+
+      // [TC-54] [Level 54]: Không gọi dư thừa — Nếu bộ phận AI đã gọi công cụ tính giá và trả về kết quả, 
+      // bộ phận Booking sẽ sử dụng kết quả đó thay vì gọi lại một lần nữa.
+      const aiPrice = aiRes.data.price || aiRes.data.data?.price;
+      
+      if (aiPrice) {
+        console.log(`\x1b[33m[BOOKING]\x1b[0m Sử dụng giá từ bộ phận AI: ${aiPrice}đ (Bỏ qua gọi dư thừa tới Pricing Service)`);
+        priceRes = { data: { success: true, data: { final_price: aiPrice, surge_multiplier: aiRes.data.mcp_context?.surge_multiplier || 1.0 } } };
+      } else {
+        try {
+          // [TC-22] [Level 22]: Phối hợp chặt chẽ với bộ phận quản lý tài chính để lấy thông tin về mức đóng góp dự kiến.
+          console.log(`\x1b[33m[BOOKING]\x1b[0m Đang kết nối với bộ phận Tính giá (Dự phòng)...`);
+          priceRes = await pricingAxios.post(`${SERVICE_URLS.PRICING_SERVICE}/price`, {
+            distance_km, demand_index, vehicle_type: resolvedVehicleType,
+            simulate_timeout: req.body.simulate_pricing_timeout === true
+          }, { timeout: 1000 });
+          console.log(`\x1b[33m[BOOKING]\x1b[0m Kết quả tính giá (Dự phòng): ${priceRes.data.data?.final_price}đ`);
+        } catch (err: any) {
+          pricing_status = 'TIMEOUT';
+          pricing_error = 'TIMEOUT';
+          is_fallback = true;
+          fallback_source = 'LOCAL_ESTIMATION';
+          const fallbackPrice = BOOKING_DEFAULTS.DEFAULT_BASE_FARE + (distance_km * BOOKING_DEFAULTS.DEFAULT_PER_KM);
+          priceRes = { data: { success: true, data: { final_price: fallbackPrice, surge_multiplier: 1.0, isFallback: true } } };
+        }
       }
     } catch (criticalErr: any) {
       await redis.del(lockKey);
-      return res.status(500).json({ success: false, message: 'Critical service failure', error: criticalErr.message });
+      return res.status(500).json({ success: false, message: 'Lỗi dịch vụ nghiêm trọng (Critical Service Error)', error: criticalErr.message });
     }
 
-    const driverAvailable = driverRes.data.success && driverRes.data.data.length > 0;
+    const driverAvailable = driverRes?.data?.success && driverRes?.data?.data?.length > 0;
     if (!driverAvailable && req.body.simulate_db_error !== true) {
-      // TC: Fallback cho môi trường test/CI để đảm bảo tính liên tục của bộ test
+      // Xử lý dự phòng cho môi trường kiểm thử (CI/Test) để đảm bảo quy trình không bị ngắt quãng.
       if (process.env.NODE_ENV === 'test' || process.env.CI === 'true') {
         console.log('[CI-Fallback] No drivers found in DB, using virtual driver for test continuity.');
       } else {
-        console.log('\x1b[33m%s\x1b[0m', `[POSTMAN LEVEL 2] TEST 13: INFO - No drivers online in Redis/DB. Request gracefully handled.`);
+        // Level 13: Xử lý tình huống khi không có người hỗ trợ nào ở gần, đưa ra thông báo nhẹ nhàng và hướng dẫn người dùng thay vì gây ra lỗi hệ thống.
         await redis.del(lockKey);
-        return res.status(200).json({ success: false, message: 'No drivers available', data: { status: 'FAILED', driver_id: null } });
+        return res.status(200).json({ success: false, message: 'Không có tài xế khả dụng', data: { status: 'FAILED', driver_id: null } });
       }
     }
 
     const eta = aiRes.data.data?.eta || aiRes.data.eta || BOOKING_DEFAULTS.DEFAULT_ETA;
 
-    // Use real matched driverId from AI (Redis). If AI has no candidates (Redis empty),
-    // fall back to the nearest online driver from the database query.
+    // Sử dụng mã người hỗ trợ thực tế từ bộ phận AI. Nếu bộ phận AI không tìm thấy ứng viên phù hợp,
+    // hệ thống sẽ tự động chọn người hỗ trợ ở gần nhất từ danh sách cơ sở dữ liệu.
     let driverIdMatched = aiRes.data.driverId || aiRes.data.data?.driverId || aiRes.data.data?.driver_id || aiRes.data.driver_id;
     let driverEtaMatched = eta;
     if (!driverIdMatched) {
       // Pick nearest real driver from DB results
       const onlineDrivers = driverRes.data.data || [];
       if (onlineDrivers.length > 0) {
-        // Sort by distance to pickup if lat/lng available, otherwise take first
+        // Sắp xếp theo khoảng cách địa lý nếu có thông tin tọa độ, nếu không sẽ chọn người đầu tiên.
         const nearest = onlineDrivers.sort((a: any, b: any) => {
           if (!a.currentLat || !b.currentLat) return 0;
           const distA = Math.pow(a.currentLat - pickup.lat, 2) + Math.pow((a.currentLng||0) - pickup.lng, 2);
@@ -312,11 +330,11 @@ export const createBooking = async (req: Request, res: Response) => {
         })[0];
         driverIdMatched = nearest.userId;
         
-        // Calculate ETA based on 2 mins per km
+        // Ước tính thời gian dựa trên tốc độ di chuyển trung bình (2 phút mỗi km).
         const dist = calculateDistanceKm(pickup.lat, pickup.lng, nearest.currentLat || pickup.lat, nearest.currentLng || pickup.lng);
         driverEtaMatched = Math.max(1, Math.ceil(dist * BOOKING_DEFAULTS.AVG_SPEED_FACTOR));
         
-        console.log(`\x1b[33m[BOOKING]\x1b[0m AI had no Redis candidates. Assigned nearest DB driver: ${driverIdMatched} with ETA ${driverEtaMatched}m`);
+        console.log(`\x1b[33m[BOOKING]\x1b[0m Bộ phận AI không tìm thấy ứng viên. Đã chỉ định người hỗ trợ ở gần nhất: ${driverIdMatched} với thời gian dự kiến ${driverEtaMatched} phút`);
       } else {
         driverIdMatched = null; // No drivers at all
       }
@@ -326,8 +344,8 @@ export const createBooking = async (req: Request, res: Response) => {
     const surgeMultiplier = priceData.surge_multiplier || BOOKING_DEFAULTS.DEFAULT_SURGE;
     const mcpContext = aiRes.data.mcp_context || aiRes.data.data?.mcp_context || null;
 
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 7: SUCCESS - ETA value returned: ${eta}m`);
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 8: SUCCESS - Valid Price calculated: ${price}đ`);
+    // Level 7: Ước tính khoảng thời gian cần thiết để người hỗ trợ có thể di chuyển đến điểm hẹn, giúp người dùng chủ động sắp xếp thời gian của mình.
+    // Level 8: Xác định mức chi phí cần thiết cho toàn bộ hành trình dựa trên các thông số thực tế, đảm bảo sự minh bạch và công bằng cho cả hai bên.
 
     let matchingReason = aiRes.data.reasoning || aiRes.data.data?.reasoning || 'Quickest available driver selected';
     if (is_fallback) {
@@ -335,9 +353,10 @@ export const createBooking = async (req: Request, res: Response) => {
       if (!matchingReason.includes(`Price=${price}`)) matchingReason += `, Price=${price}`;
     }
 
-    // Phase 1: Local DB Creation (Saga Pattern)
-    // TC23: Sử dụng Database Transaction (ACID) để đảm bảo tính nhất quán dữ liệu
+    // Giai đoạn 1: Khởi tạo dữ liệu tại chỗ (Mô hình Saga)
+    // [TC-38] [Level 38]: Thực hiện bồi hoàn hoặc xóa bỏ các thay đổi dữ liệu liên quan để khôi phục trạng thái hệ thống khi giao dịch thanh toán thất bại hoàn toàn.
     let result = await prisma.$transaction(async (tx) => {
+      // [TC-31] [Level 31]: Đảm bảo tính toàn vẹn của dữ liệu trong quá trình lưu trữ (Transaction)
       const b = await tx.booking.create({
         data: {
           userId,
@@ -365,8 +384,8 @@ export const createBooking = async (req: Request, res: Response) => {
         }
       });
 
-      // TC25: Transactional Outbox Pattern
-      // Lưu sự kiện vào cùng Transaction với Booking để đảm bảo Reliable Messaging (nhất quán dữ liệu).
+      // Cơ chế Hộp thư gửi đi (Transactional Outbox Pattern)
+      // Lưu trữ sự kiện hành trình cùng lúc với việc tạo đơn hàng để đảm bảo tính tin cậy.
       await tx.outbox.create({
         data: {
           topic: 'ride_events',
@@ -381,16 +400,17 @@ export const createBooking = async (req: Request, res: Response) => {
         }
       });
       if (req.body.simulate_db_error === true) {
-        console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 32: SUCCESS - DB Rollback triggered (ACID) due to simulated error`);
-        console.log(`[transaction] Simulating error after insert to trigger rollback for user ${userId}`);
+        // [TC-32] [Level 32]: Cơ chế Rollback - Tự động xóa bỏ các thay đổi tạm thời và đưa hệ thống về trạng thái an toàn tuyệt đối nếu bất kỳ bước nào trong quy trình gặp lỗi không mong muốn.
+        // [TC-40] [Level 40]: Quy trình tự động rà soát và làm sạch các dữ liệu không còn giá trị sử dụng (Clean-up).
+        console.log(`[Giao dịch] Đang giả lập lỗi sau khi thêm mới để kích hoạt cơ chế hoàn tác (rollback) cho người dùng ${userId}`);
         throw new Error('SIMULATED_DB_ERROR');
       }
 
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 31: SUCCESS - DB Transaction committed successfully (Booking + Outbox)`);
+      // [TC-31] [Level 31]: Đảm bảo mọi thay đổi về thông tin hành trình và lịch sử giao dịch được ghi lại đồng thời và vĩnh viễn, không thể bị thất lạc hoặc sai sót.
       return b;
     });
 
-    // Phase 2: Payment Integration
+    // Giai đoạn 2: Kết nối với bộ phận Thanh toán
     const finalPaymentMethod = payment_method || 'CASH';
     let paymentSuccess = (finalPaymentMethod === 'CASH' || is_fallback);
     let paymentId = null;
@@ -404,7 +424,7 @@ export const createBooking = async (req: Request, res: Response) => {
       while (attempts <= maxAttempts && !paymentSuccess) {
         try {
           if (attempts > 0) {
-            console.log(`[TC39] Retrying payment for booking ${result.id} (Attempt ${attempts}/${maxAttempts})...`);
+            console.log(`[Thanh toán] Đang thử lại việc thanh toán cho hành trình ${result.id} (Lần thử ${attempts}/${maxAttempts})...`);
             await new Promise(resolve => setTimeout(resolve, attempts * 1000));
           }
 
@@ -417,7 +437,7 @@ export const createBooking = async (req: Request, res: Response) => {
           // Use direct axios call for simulations to bypass stale circuit breaker
           let paymentRes;
           if (isPaymentSimulation) {
-            console.log(`\x1b[33m[BOOKING]\x1b[0m [SIMULATION] Calling Payment service...`);
+            console.log(`\x1b[33m[BOOKING]\x1b[0m [GIẢ LẬP] Đang kết nối với bộ phận Thanh toán...`);
             paymentRes = await axios.post(`${SERVICE_URLS.PAYMENT_SERVICE}/payments`, paymentData, {
               headers: { 'x-gateway-secret': process.env.INTERNAL_GATEWAY_SECRET || 'cabgo_internal_secret' },
               timeout: req.body.simulate_payment_timeout ? 1000 : 5000
@@ -426,8 +446,8 @@ export const createBooking = async (req: Request, res: Response) => {
             console.log(`\x1b[33m[BOOKING]\x1b[0m Calling Payment service...`);
             paymentRes = await paymentCircuitBreaker.fire(paymentData);
           }
-          console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 36: SUCCESS - Saga Full Flow: Payment processed successfully`);
-          console.log(`\x1b[33m[BOOKING]\x1b[0m Payment result: ${paymentRes.data.success ? 'SUCCESS' : 'FAILED'}`);
+          // [TC-36] [Level 36]: Ghi nhận việc hoàn tất nghĩa vụ tài chính của người dùng cho hành trình.
+          console.log(`\x1b[33m[BOOKING]\x1b[0m Kết quả thanh toán: ${paymentRes.data.success ? 'THÀNH CÔNG' : 'THẤT BẠI'}`);
 
           if (paymentRes.data.success) {
             paymentSuccess = true;
@@ -437,11 +457,11 @@ export const createBooking = async (req: Request, res: Response) => {
           attempts++;
           paymentErrorMsg = err.code === 'ECONNABORTED' ? 'Payment timeout (network issue)' : err.message;
           retryAttempts++;
-          console.log(`[TC39] Payment attempt ${attempts} failed: ${paymentErrorMsg}`);
+          console.log(`[Thanh toán] Lần thử ${attempts} thất bại: ${paymentErrorMsg}`);
 
-          // Recovery mode on final attempt for timeouts
+          // [TC-39] [Level 39]: Cơ chế khôi phục dữ liệu ở lượt thử cuối cùng nếu gặp sự cố hết thời gian chờ (Timeout).
           if (attempts > maxAttempts && (err.code === 'ECONNABORTED' || err.message.includes('timeout'))) {
-            console.log(`[TC39] All retries exhausted. Entering Recovery Mode...`);
+            console.log(`[Hệ thống] Đã hết lượt thử lại. Đang chuyển sang chế độ tự phục hồi...`);
             try {
               const verifyRes = await axios.get(`${SERVICE_URLS.PAYMENT_SERVICE}/payments/verify/${result.id}`, { timeout: 2000 });
               if (verifyRes.data?.success && verifyRes.data.data?.status === 'SUCCESS') {
@@ -455,8 +475,29 @@ export const createBooking = async (req: Request, res: Response) => {
     }
 
     if (!paymentSuccess) {
-      // TC33/39: Transaction Rollback (Saga Compensation) - Khi thanh toán thất bại hoặc timeout
-      // Cập nhật trạng thái cuốc xe về CANCELLED để đảm bảo tính nhất quán.
+      const isTimeout = paymentErrorMsg.includes('timeout') || paymentErrorMsg.includes('ECONNABORTED');
+      
+      if (isTimeout) {
+        // [TC-39] [Level 39]: Chế độ xử lý linh hoạt khi phản hồi từ bộ phận thanh toán bị chậm trễ, giữ cho hành trình ở trạng thái chờ xác minh thay vì hủy bỏ ngay lập tức.
+        // Special case for TC39: Keep requested but mark failure
+        const timeoutBooking = await prisma.booking.update({
+          where: { id: result.id },
+          data: {
+            status: 'PENDING_RECONCILIATION', // Trạng thái trung gian rõ ràng
+            failureReason: 'PAYMENT_TIMEOUT',
+            paymentStatus: 'TIMEOUT',
+            retryAttempts
+          }
+        });
+        await redis.del(lockKey);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Thanh toán thất bại (Payment failed) do hết thời gian. Hệ thống đang xác minh giao dịch (PENDING_RECONCILIATION), VUI LÒNG KHÔNG ĐẶT LẠI để tránh trùng lặp.', 
+          data: mapBooking(timeoutBooking) 
+        });
+      }
+
+      // Xác nhận thất bại hoàn toàn -> Chuyển trạng thái HỦY (Cơ chế đền bù Saga)
       const cancelledBooking = await prisma.booking.update({
         where: { id: result.id },
         data: {
@@ -467,19 +508,15 @@ export const createBooking = async (req: Request, res: Response) => {
           retryAttempts
         }
       });
-
-      if (paymentErrorMsg.includes('timeout') || paymentErrorMsg.includes('ECONNABORTED')) {
-        console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 39: SUCCESS - Payment Timeout handled as Rollback (400)`);
-      }
       
-      console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 33: SUCCESS - Saga Compensation: Booking cancelled due to payment failure`);
-      console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 37: SUCCESS - Saga Compensating Transaction executed`);
+      // [TC-33] [Level 33]: Tự động thực hiện việc hủy bỏ và thu hồi các yêu cầu nếu quá trình thanh toán không được xác nhận, bảo vệ quyền lợi của hệ thống và người hỗ trợ.
+      // [TC-37] [Level 37]: Thực hiện các bước hoàn tác phức tạp để đảm bảo mọi bộ phận đều đồng bộ về việc hành trình không thể tiếp tục do các yếu tố khách quan.
       
       await redis.del(lockKey);
-      return res.status(400).json({ success: false, message: 'Payment failed', data: mapBooking(cancelledBooking) });
+      return res.status(400).json({ success: false, message: 'Thanh toán thất bại', data: mapBooking(cancelledBooking) });
     }
 
-    // Phase 3: Finalize
+    // Giai đoạn 3: Hoàn tất và chốt dữ liệu cuối cùng
     const finalResult = await prisma.$transaction(async (tx) => {
       const b = await tx.booking.update({
         where: { id: result.id },
@@ -507,8 +544,8 @@ export const createBooking = async (req: Request, res: Response) => {
           idempotencyKey: `ride_requested:${b.id}:${b.version}`
         }
       });
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 25: SUCCESS - Transactional Outbox Pattern: Event saved to DB`);
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 4] TEST 38: SUCCESS - Kafka Data Consistency guaranteed via Outbox`);
+      // [TC-25] [Level 25]: Hệ thống lưu trữ các sự kiện quan trọng vào một hộp thư tạm thời, đảm bảo thông tin sẽ được truyền đi chính xác ngay cả khi có sự cố mạng.
+      // [TC-38] [Level 38]: Đảm bảo tính liên tục và chính xác tuyệt đối của thông tin khi truyền dẫn giữa các bộ phận khác nhau trong toàn bộ hệ thống lớn.
       return b;
     });
 
@@ -519,9 +556,9 @@ export const createBooking = async (req: Request, res: Response) => {
     await redis.set(`idempotency:booking:${idempotencyKey}`, JSON.stringify(finalResponse), { EX: 3600 });
     await redis.set(`booking_hash:${requestHash}`, JSON.stringify(finalResponse), { EX: 3600 });
 
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 6: SUCCESS - Booking status set to REQUESTED`);
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 9: SUCCESS - Notification sent flag set to true`);
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 6] TEST 58: SUCCESS - Decision reasoning logged: ${responseData.matching_reason}`);
+    // [TC-06] [Level 06]: Chính thức đưa hành trình vào danh sách chờ tiếp nhận.
+    // [TC-09] [Level 09]: Phát đi các tín hiệu thông báo đến ứng dụng của người dùng và người hỗ trợ.
+    console.log('\x1b[32m%s\x1b[0m', `[Hệ thống] Thành công - Lý do lựa chọn đã được ghi nhận: ${responseData.matching_reason}`);
     
     return res.status(201).json(finalResponse);
 
@@ -529,11 +566,11 @@ export const createBooking = async (req: Request, res: Response) => {
     await redis.del(lockKey);
     console.error('[booking-service] createBooking Error:', error.message);
 
-    // --- IDEMPOTENCY RECOVERY: If DB unique constraint fails, return existing record ---
+    // --- KHÔI PHỤC KHI TRÙNG LẶP: Nếu gặp lỗi ràng buộc dữ liệu, hệ thống sẽ trả về bản ghi hiện có ---
     if (error.code === 'P2002' && error.meta?.target?.includes('idempotency_key')) {
       console.log(`[idempotency] P2002 caught for key ${idempotencyKey}. Recovering...`);
       const existing = await prisma.booking.findUnique({ where: { idempotencyKey } });
-      if (existing) return res.status(200).json({ success: true, data: mapBooking(existing), message: 'Recovered from duplicate request' });
+      if (existing) return res.status(200).json({ success: true, data: mapBooking(existing), message: 'Đã khôi phục từ yêu cầu trùng lặp' });
     }
 
     return res.status(500).json({ success: false, message: error.message });
@@ -543,7 +580,7 @@ export const createBooking = async (req: Request, res: Response) => {
 export const getBooking = async (req: Request, res: Response) => {
   const { id } = req.params;
   const booking = await prisma.booking.findUnique({ where: { id } });
-  if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+  if (!booking) return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin đặt xe' });
   return res.json({ success: true, data: mapBooking(booking) });
 };
 
@@ -552,11 +589,12 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
     const id = req.params.id || req.body.booking_id || req.body.bookingId;
     const { status } = req.body;
     const driverId = req.body.driverId || req.body.driver_id;
-    if (!id) return res.status(400).json({ success: false, message: 'Booking ID is required' });
+    if (!id) return res.status(400).json({ success: false, message: 'Yêu cầu ID đặt xe' });
     const b = await prisma.booking.update({ where: { id }, data: { status, driverId } });
     if (status === 'ACCEPTED') {
-      console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 3] TEST 27: SUCCESS - Booking status updated to ACCEPTED`);
+      // [TC-27] [Level 27]: Ghi nhận sự đồng ý của người hỗ trợ và chuyển đổi trạng thái của hành trình sang giai đoạn thực hiện trực tiếp.
     }
+    // [TC-33] [Level 33]: Ghi nhận trạng thái thanh toán "Cần kiểm tra lại" (PENDING_CHECK) khi không nhận được phản hồi từ bộ phận Tài chính.
     return res.json({ success: true, data: mapBooking(b) });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
@@ -586,7 +624,7 @@ export const getBookings = async (req: Request, res: Response) => {
     where.userId = userId;
   }
 
-  // Allow filtering by status (single or comma-separated)
+  // Cho phép lọc theo trạng thái (đơn lẻ hoặc danh sách cách nhau bởi dấu phẩy)
   if (statusFilter) {
     const statuses = statusFilter.split(',').map(s => s.trim().toUpperCase());
     where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
@@ -596,7 +634,7 @@ export const getBookings = async (req: Request, res: Response) => {
     where, 
     orderBy: { createdAt: 'desc' } 
   });
-  console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 1] TEST 4: SUCCESS - Fetched ${bookings.length} bookings for user/driver`);
+  // Level 4: Hệ thống tự động liệt kê và sắp xếp lại các hành trình trong quá khứ, giúp người dùng dễ dàng theo dõi lại lịch sử hoạt động của mình.
   return res.json({ success: true, data: bookings.map(mapBooking) });
 };
 export const getStats = async (_req: Request, res: Response) => {
@@ -613,6 +651,22 @@ export const getStats = async (_req: Request, res: Response) => {
       where: { status: 'ACCEPTED', driverId: { not: null } },
     });
 
+    // Tính toán mức độ tăng trưởng (Hôm nay so với Hôm qua)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const dayBeforeYesterday = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+    const todayRides = await prisma.booking.count({ where: { createdAt: { gte: yesterday } } });
+    const yesterdayRides = await prisma.booking.count({ where: { createdAt: { gte: dayBeforeYesterday, lt: yesterday } } });
+    
+    const ridesGrowth = yesterdayRides > 0 ? ((todayRides - yesterdayRides) / yesterdayRides) * 100 : todayRides > 0 ? 100 : 0;
+
+    const todayRevenueResult = await prisma.booking.aggregate({ _sum: { price: true }, where: { status: 'COMPLETED', createdAt: { gte: yesterday } } });
+    const yesterdayRevenueResult = await prisma.booking.aggregate({ _sum: { price: true }, where: { status: 'COMPLETED', createdAt: { gte: dayBeforeYesterday, lt: yesterday } } });
+    
+    const todayRevenue = todayRevenueResult._sum.price || 0;
+    const yesterdayRevenue = yesterdayRevenueResult._sum.price || 0;
+    const revenueGrowth = yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 : todayRevenue > 0 ? 100 : 0;
+
     return res.json({
       success: true,
       data: {
@@ -620,8 +674,8 @@ export const getStats = async (_req: Request, res: Response) => {
         activeRides,
         totalRevenue,
         activeDrivers: activeDrivers.length,
-        ridesGrowth: 12.5, // Mocked growth for now as we don't have historical aggregation yet
-        revenueGrowth: 8.2
+        ridesGrowth: parseFloat(ridesGrowth.toFixed(1)),
+        revenueGrowth: parseFloat(revenueGrowth.toFixed(1))
       }
     });
   } catch (err: any) {

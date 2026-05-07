@@ -149,10 +149,31 @@ Hệ thống sử dụng mô hình **Microservices** với **API Gateway** là c
 - **Code:** [booking.controller.ts:259](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L259)
 - **Kết quả:** Log: `Integration call to AI Matching/ETA successful`.
 
-### TC 22: Chống trùng lặp nghiệp vụ (Business Idempotency)
-- **Logic:** Nếu cùng một User đặt 2 cuốc tại cùng vị trí trong vòng 5 phút, hệ thống tự nhận diện là trùng.
-- **Code:** [booking.controller.ts:209](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L209)
-- **Kết quả:** Trả về cuốc xe hiện có thay vì tạo mới.
+### TC 22: Booking -> gọi Pricing service
+- **Postman:** `POST {{GATEWAY_URL}}/bookings`
+- **Body:** `{ "pickup": {"lat": 10.76, "lng": 106.66}, "drop": {"lat": 10.77, "lng": 106.70} }`
+- **Logic:** Booking Service gọi sang Pricing Service để tính giá dựa trên khoảng cách và loại xe.
+- **Code:** [booking.controller.ts:270](file:///e:/Cab-booking/backend/microservices/booking-service/src/controllers/booking.controller.ts#L270) và [pricing-service/src/index.ts:70](file:///e:/Cab-booking/backend/microservices/pricing-service/src/index.ts#L70)
+- **Kết quả:** Trả về `price > 0`, `surge_multiplier >= 1.0`, và `pricing_status: "OK"`.
+- **Minh chứng Postman:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": "47f634aa-39c8-4953-bbc2-1966da24fa18",
+        "pickup_lat": 10.76,
+        "pickup_lng": 106.66,
+        "drop_lat": 10.77,
+        "drop_lng": 106.7,
+        "distance_km": 1,
+        "price": 28000,
+        "surge_multiplier": 1,
+        "status": "REQUESTED",
+        "pricing_status": "OK"
+    }
+}
+```
+
 
 ### TC 23: Agent chấm điểm tài xế
 - **Logic:** AI Agent fetch tài xế từ Redis Geo và áp dụng Scoring Model.
@@ -270,11 +291,26 @@ Hệ thống sử dụng mô hình **Microservices** với **API Gateway** là c
 - **Code:** [pricing-service/src/index.ts:37](file:///e:/Cab-booking/backend/microservices/pricing-service/src/index.ts#L37)
 - **Kết quả:** Giá tăng so với bình thường, có tag `surge_multiplier > 1.0`.
 
-### TC 43: Fraud Detection (Phát hiện gian lận)
-- **Thực hiện:** Đặt xe với số tiền > 10,000,000đ.
-- **Logic:** Fraud Service đánh dấu `is_fraud: true` dựa trên ngưỡng giao dịch.
-- **Code:** [fraud-service/src/index.ts:34](file:///e:/Cab-booking/backend/microservices/fraud-service/src/index.ts#L34)
-- **Kết quả:** Hệ thống log cảnh báo gian lận.
+### TC 43: Fraud score > threshold -> flagged
+- **Postman:** `POST {{GATEWAY_URL}}/fraud/check`
+- **Body:** `{ "user_id": "u1", "amount": 50000, "simulate_fraud": true }`
+- **Logic:** Fraud Service đánh dấu giao dịch là `is_fraud: true` nếu số tiền vượt ngưỡng `FRAUD_THRESHOLD` (mặc định 10M) hoặc có cờ `simulate_fraud`.
+- **Code:** [fraud-service/src/index.ts:32](file:///e:/Cab-booking/backend/microservices/fraud-service/src/index.ts#L32)
+- **Kết quả:** Trả về `is_fraud: true`, `risk_level` tương ứng với `score`.
+- **Minh chứng Postman:**
+```json
+{
+    "success": true,
+    "data": {
+        "is_fraud": true,
+        "isFraud": true,
+        "score": 0.945,
+        "risk_level": "HIGH",
+        "modelVersion": "v1.0.5-fraud"
+    }
+}
+```
+
 
 ### TC 44: Recommendation Top-3 (Đề xuất)
 - **Logic:** Ngoài tài xế thắng cuộc, AI trả về danh sách 2 người tiềm năng tiếp theo.

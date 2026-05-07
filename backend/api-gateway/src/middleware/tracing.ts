@@ -2,14 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
 export const tracingMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Extract existing trace ID if available, otherwise create a new one (Item 115)
+  // Trích xuất mã vết (trace ID) hiện có nếu có, nếu không sẽ tạo mới (Mục 115)
   const traceId = req.headers['x-trace-id'] || uuidv4();
   
-  // Attach it to the request so proxy downstream can pick it up
+  // Đính kèm vào yêu cầu để các bộ phận phía sau có thể nhận diện
   (req as any).traceId = traceId;
   res.setHeader('x-trace-id', traceId as string);
 
-  // Structured Logging (Item 112)
+  // Nhật ký có cấu trúc (Mục 112)
   console.log(JSON.stringify({
     timestamp: new Date().toISOString(),
     service_name: 'api-gateway',

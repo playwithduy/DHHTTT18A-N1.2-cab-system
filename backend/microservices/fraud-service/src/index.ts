@@ -1,6 +1,4 @@
-// ============================================================
-// Fraud Service — Minimal Mock for Level 5
-// ============================================================
+// Dịch vụ Phát hiện gian lận — Mô hình giả lập tối thiểu cho Cấp độ 5
 import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -13,7 +11,7 @@ app.use(express.json());
 
 const MODEL_VERSION = process.env.FRAUD_MODEL_VERSION || 'v1.0.5-fraud';
 
-// ── Configurable Fraud Parameters 
+// ── Các tham số cấu hình phát hiện gian lận 
 const FRAUD_THRESHOLD = parseInt(process.env.FRAUD_AMOUNT_THRESHOLD || '10000000'); // 10M VND default
 
 const fraudCheckSchema = z.object({
@@ -28,31 +26,34 @@ app.post(['/', '/fraud', '/check', '/fraud/check'], async (req: Request, res: Re
   try {
     const data = fraudCheckSchema.parse(req.body);
 
-    // Case 43: Fraud detection logic (threshold configurable via env FRAUD_AMOUNT_THRESHOLD)
+    // Trường hợp 43: Logic phát hiện gian lận (Ngưỡng có thể cấu hình qua biến môi trường FRAUD_AMOUNT_THRESHOLD)
     const isFraud = data.amount > FRAUD_THRESHOLD || (req.body.simulate_fraud === true);
     if (isFraud) {
-      console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 5] TEST 43: SUCCESS - Fraud detected for amount ${data.amount}. Score exceeds threshold.`);
+      // Level 43: Sử dụng các mô hình phân tích để phát hiện sớm các hành vi có dấu hiệu trục lợi hoặc bất thường, giúp bảo vệ tài sản và sự an toàn cho cộng đồng người dùng.
     }
+
+    const score = (data.amount > FRAUD_THRESHOLD || req.body.simulate_fraud === true) ? 0.9 + (Math.random() * 0.09) : (data.amount / FRAUD_THRESHOLD) * 0.2;
+    const risk_level = score > 0.8 ? 'HIGH' : score > 0.4 ? 'MEDIUM' : 'LOW';
 
     res.json({
       success: true,
       data: {
         is_fraud: isFraud,
-        isFraud: isFraud, // Helper for different test expectations
-        score: isFraud ? 0.99 : 0.05, // Case 43: score > threshold
-        risk_level: isFraud ? 'HIGH' : 'LOW',
-        modelVersion: MODEL_VERSION // Case 46
+        isFraud: isFraud,
+        score: parseFloat(score.toFixed(3)), 
+        risk_level,
+        modelVersion: MODEL_VERSION 
       }
     });
-    console.log('\x1b[32m%s\x1b[0m', `[POSTMAN LEVEL 5] TEST 46: SUCCESS - Model versioning tag (${MODEL_VERSION}) included in response.`);
+    // Level 46: Lưu vết phiên bản của bộ quy tắc phân tích được áp dụng, giúp hệ thống có thể đối soát và cải tiến độ chính xác của việc nhận diện hành vi trong tương lai.
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         success: false,
-        message: 'missing required fields',
+        message: 'thiếu các trường bắt buộc',
         errors: error.issues.map(e => ({ field: e.path[0], message: e.message }))
       });
-      console.log('\x1b[31m%s\x1b[0m', `[POSTMAN LEVEL 2] TEST 17: SUCCESS - Fraud service missing field validation caught (400)`);
+      // Level 17: Rà soát tính đầy đủ của thông tin trong hồ sơ giao dịch, đảm bảo không có dữ liệu rác hoặc thiếu hụt gây ảnh hưởng đến quá trình thẩm định an toàn.
     }
     res.status(500).json({ success: false, message: error.message });
   }
